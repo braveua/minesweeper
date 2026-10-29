@@ -26,9 +26,9 @@ type
     procedure CellMine(x,y: Integer);
     procedure FieldInit;
   private
-    ColorGray:TColor;
-    ColorWhite:TColor;
-    ColorDark:TColor;
+    //ColorGray:TColor;
+    //ColorWhite:TColor;
+    //ColorDark:TColor;
     XMAX: Integer;
     YMAX: Integer;
     SIZE: Integer;
@@ -49,6 +49,8 @@ const
   ColorGray = $C0C0C0;
   ColorWhite = $FFFFFF;
   ColorDark = $808080;
+  //paddirg
+  Padding = 4;
 
 var
   Form1: TForm1;
@@ -81,8 +83,7 @@ begin
   FieldInit;
 end;
 
-procedure TForm1.FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState
-  );
+procedure TForm1.FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
   // Проверяем, что зажат Ctrl и нажата клавиша H
   if (ssCtrl in Shift) and (Key = Ord('H')) then
@@ -141,14 +142,27 @@ end;
 
 procedure TForm1.DrawNew(cell: TRect);
 var
-  p1,p2,p3,p4: TPoint;
+  p1, p2, p3, p4: TPoint;
+  p5, p6, p7, p8: TPoint;
 begin
   p1:=cell.TopLeft;
   p3:=cell.BottomRight;
   p2:=Point(p3.x, p1.y);
   p4:=Point(p1.x, p3.y);
 
-  PaintBox1.Canvas.Polygon([p1,p2,p3,p4]);
+  p5:=Point(p1.x + Padding, p1.y + Padding);
+  p6:=Point(p2.x - Padding, p2.y + Padding);
+  p7:=Point(p3.x - Padding, p3.y - Padding);
+  p8:=Point(p4.x + Padding, p4.y - Padding);
+
+  PaintBox1.Canvas.Pen.Style := psClear; //отключение обводки полигонов
+  PaintBox1.Canvas.Brush.Color:=ColorGray;
+  PaintBox1.Canvas.Fillrect(cell);
+  PaintBox1.Canvas.Brush.Color:=ColorWhite;
+  PaintBox1.Canvas.Polygon([p4, p1, p2, p6, p5, p8]);
+  PaintBox1.Canvas.Brush.Color:=ColorDark;
+  PaintBox1.Canvas.Polygon([p2, p3, p4, p8, p7, p6]);
+
 end;
 
 procedure TForm1.CellEmpty(x, y: Integer);
