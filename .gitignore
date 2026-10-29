@@ -1,0 +1,9 @@
+*
+!.gitignore
+!*.lfm
+!*.pas
+!*.ico
+!*.lpi
+!*.lpr
+!*.lps
+!*.res

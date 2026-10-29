@@ -1,0 +1,22 @@
+object Form1: TForm1
+  Left = 1920
+  Height = 240
+  Top = 250
+  Width = 320
+  Caption = 'MineSweeper'
+  ClientHeight = 240
+  ClientWidth = 320
+  KeyPreview = True
+  Position = poDesktopCenter
+  LCLVersion = '4.8.0.0'
+  OnCreate = FormCreate
+  OnKeyDown = FormKeyDown
+  object PaintBox1: TPaintBox
+    Left = 0
+    Height = 240
+    Top = 0
+    Width = 320
+    Align = alClient
+    OnPaint = PaintBox1Paint
+  end
+end

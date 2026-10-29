@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CONFIG>
+  <ProjectSession>
+    <Version Value="12"/>
+    <BuildModes Active="Default"/>
+    <Units>
+      <Unit>
+        <Filename Value="minesweeper.lpr"/>
+        <IsPartOfProject Value="True"/>
+        <EditorIndex Value="-1"/>
+        <CursorPos X="14" Y="13"/>
+        <UsageCount Value="44"/>
+      </Unit>
+      <Unit>
+        <Filename Value="main.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="Form1"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+        <UnitName Value="Main"/>
+        <IsVisibleTab Value="True"/>
+        <TopLine Value="96"/>
+        <CursorPos Y="111"/>
+        <UsageCount Value="44"/>
+        <Loaded Value="True"/>
+        <LoadedDesigner Value="True"/>
+      </Unit>
+      <Unit>
+        <Filename Value="/usr/share/lazarus/4.8.0/lcl/include/canvas.inc"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="1207"/>
+        <CursorPos X="19" Y="1217"/>
+        <UsageCount Value="13"/>
+      </Unit>
+      <Unit>
+        <Filename Value="/usr/share/lazarus/4.8.0/lcl/interfaces/gtk2/gtk2winapi.inc"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="1721"/>
+        <CursorPos Y="1735"/>
+        <UsageCount Value="10"/>
+      </Unit>
+    </Units>
+    <JumpHistory HistoryIndex="29">
+      <Position>
+        <Filename Value="main.pas"/>
+        <Caret Line="106" TopLine="89"/>
+      </Position>
+      <Position>
+        <Filename Value="main.pas"/>
+        <Caret Line="107" TopLine="89"/>
+      </Position>
+      <Position>
+        <Filename Value="main.pas"/>
+        <Caret Line="108" TopLine="89"/>
+      </Position>
+      <Position>
+        <Filename Value="main.pas"/>
+        <Caret Line="109" TopLine="89"/>
+      </Position>
+      <Position>
+        <Filename Value="main.pas"/>
+        <Caret Line="110" TopLine="89"/>
+      </Position>
+      <Position>
+        <Filename Value="main.pas"/>
+        <Caret Line="111" TopLine="89"/>
+      </Position>
+      <Position>
+        <Filename Value="main.pas"/>
+        <Caret Line="113" TopLine="89"/>
+      </Position>
+      <Position>
+        <Filename Value="main.pas"/>
+        <Caret Line="47" Column="39" TopLine="34"/>
+      </Position>
+      <Position>
+        <Filename Value="main.pas"/>
+        <Caret Line="105" TopLine="90"/>
+      </Position>
+      <Position>
+        <Filename Value="main.pas"/>
+        <Caret Line="106" TopLine="90"/>
+      </Position>
+      <Position>
+        <Filename Value="main.pas"/>
+        <Caret Line="107" TopLine="90"/>
+      </Position>
+      <Position>
+        <Filename Value="main.pas"/>
+        <Caret Line="108" TopLine="90"/>
+      </Position>
+      <Position>
+        <Filename Value="main.pas"/>
+        <Caret Line="109" TopLine="90"/>
+      </Position>
+      <Position>
+        <Filename Value="main.pas"/>
+        <Caret Line="110" TopLine="90"/>
+      </Position>
+      <Position>
+        <Filename Value="main.pas"/>
+        <Caret Line="111" TopLine="90"/>
+      </Position>
+      <Position>
+        <Filename Value="main.pas"/>
+        <Caret Line="113" TopLine="90"/>
+      </Position>
+      <Position>
+        <Filename Value="main.pas"/>
+        <Caret Line="114" TopLine="90"/>
+      </Position>
+      <Position>
+        <Filename Value="main.pas"/>
+        <Caret Line="145" TopLine="130"/>
+      </Position>
+      <Position>
+        <Filename Value="main.pas"/>
+        <Caret Line="146" TopLine="130"/>
+      </Position>
+      <Position>
+        <Filename Value="main.pas"/>
+        <Caret Line="147" TopLine="130"/>
+      </Position>
+      <Position>
+        <Filename Value="main.pas"/>
+        <Caret Line="151" TopLine="130"/>
+      </Position>
+      <Position>
+        <Filename Value="main.pas"/>
+        <Caret Line="105" TopLine="90"/>
+      </Position>
+      <Position>
+        <Filename Value="main.pas"/>
+        <Caret Line="146" TopLine="131"/>
+      </Position>
+      <Position>
+        <Filename Value="main.pas"/>
+        <Caret Line="149" Column="24" TopLine="134"/>
+      </Position>
+      <Position>
+        <Filename Value="main.pas"/>
+        <Caret Line="147" TopLine="134"/>
+      </Position>
+      <Position>
+        <Filename Value="main.pas"/>
+        <Caret Line="111" TopLine="98"/>
+      </Position>
+      <Position>
+        <Filename Value="main.pas"/>
+        <Caret Line="151" TopLine="136"/>
+      </Position>
+      <Position>
+        <Filename Value="main.pas"/>
+        <Caret Line="111" TopLine="96"/>
+      </Position>
+      <Position>
+        <Filename Value="main.pas"/>
+        <Caret Line="151" TopLine="136"/>
+      </Position>
+      <Position>
+        <Filename Value="main.pas"/>
+        <Caret Line="221" Column="17" TopLine="204"/>
+      </Position>
+    </JumpHistory>
+    <RunParams>
+      <FormatVersion Value="2"/>
+      <Modes ActiveMode=""/>
+    </RunParams>
+  </ProjectSession>
+  <Debugging>
+    <Watches>
+      <Item>
+        <Expression Value="cell"/>
+      </Item>
+      <Item>
+        <Expression Value="p3"/>
+      </Item>
+      <Item>
+        <Expression Value="x"/>
+      </Item>
+      <Item>
+        <Expression Value="y"/>
+      </Item>
+      <Item>
+        <Expression Value="field[x,y]"/>
+      </Item>
+      <Item>
+        <Expression Value="field"/>
+        <DisplayFormat ArrayNavBarInherit="False"/>
+      </Item>
+    </Watches>
+  </Debugging>
+</CONFIG>
