@@ -22,6 +22,7 @@ type
     procedure PaintBox1Paint(Sender: TObject);
     procedure DrawNew(cell: TRect);
     procedure DrawEmpty(cell: TRect);
+    procedure DrawNum(cell: TRect; num: Integer);
     procedure CellEmpty(x,y: Integer);
     procedure CellMine(x,y: Integer);
     procedure FieldInit;
@@ -111,8 +112,11 @@ begin
       y1 := y0 + SIZE - 1;
       cell := Rect(x0, y0, x1, y1);
 
-      case field[x,y].state of
-        NewCell: DrawNew(cell);
+      if not field[x, y].open then
+         DrawNew(cell)
+      else case field[x,y].state of
+        EmptyCell: DrawEmpty(cell);
+        1..3: DrawNum(cell, field[x, y].state);
         else ;
       end;
       //if field[x,y].state=-1 then begin
@@ -138,6 +142,26 @@ procedure TForm1.DrawEmpty(cell: TRect);
 begin
   PaintBox1.Canvas.Brush.Color:=ColorGray;
   PaintBox1.Canvas.FillRect(cell);
+end;
+
+procedure TForm1.DrawNum(cell: TRect; num: Integer);
+var
+  ts: TTextStyle;
+begin
+  DrawEmpty(cell);
+
+  PaintBox1.Canvas.Font.Color:=clRed; //цвет цифры
+  PaintBox1.Canvas.Font.Size:=18;
+  PaintBox1.Canvas.Font.Style:=[fsBold];
+
+  ts := PaintBox1.Canvas.TextStyle;
+  ts.Alignment    := taCenter;       // По горизонтали: по центру
+  ts.Layout       := tlCenter;       // По вертикали: по центру
+  ts.SingleLine   := True;           // Обязательно для вертикального выравнивания
+  ts.Clipping     := False;          // Выключаем обрезку (на случай, если текст чуть больше box)
+
+  PaintBox1.Canvas.TextStyle := ts;
+  PaintBox1.Canvas.TextRect(cell, cell.left, cell.top, IntToStr(num));
 end;
 
 procedure TForm1.DrawNew(cell: TRect);
@@ -241,7 +265,9 @@ begin
   //field[1, 2].state := NewCell;
   //field[2, 0].state := NewCell;
   //field[2, 1].state := NewCell;
-  //field[2, 2].state := NewCell;
+  field[0, 1].state := 1;         field[0,1].open := True;
+  field[1, 1].state := EmptyCell; field[1,1].open := True;
+  field[2, 1].state := 2;         field[2,1].open := True;
 end;
 
 
