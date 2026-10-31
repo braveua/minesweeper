@@ -5,7 +5,7 @@ unit Main;
 interface
 
 uses
-  Classes, SysUtils, Forms, Controls, Graphics, Dialogs, ExtCtrls, Math;
+  Classes, SysUtils, Forms, Controls, Graphics, Dialogs, ExtCtrls;
 
 type
   TCell = record
@@ -19,16 +19,19 @@ type
     PaintBox1: TPaintBox;
     procedure FormCreate(Sender: TObject);
     procedure FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
-    procedure PaintBox1Click(Sender: TObject);
+    //procedure PaintBox1Click(Sender: TObject);
+    procedure PaintBox1MouseDown(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
     procedure PaintBox1Paint(Sender: TObject);
     function GetCellRect(x, y:Integer): TRect;
     procedure OpenCell(x, y: Integer);
+    procedure ToggleFlag(x, y: Integer);
     procedure DrawClosed(cell: TRect);
     procedure DrawEmpty(cell: TRect);
     procedure DrawNum(cell: TRect; num: Integer);
     procedure DrawMine(cell: TRect);
+    procedure DrawFlag(cell: TRect);
     //procedure CellEmpty(x,y: Integer);
-    procedure CellMine(x,y: Integer);
+    //procedure CellMine(x,y: Integer);
     procedure FieldInit;
   private
     XMAX: Integer;
@@ -90,19 +93,12 @@ begin
   end;
 end;
 
-procedure TForm1.PaintBox1Click(Sender: TObject);
-var
-  LocalPos: TPoint;
-  x, y: Integer;
+procedure TForm1.PaintBox1MouseDown(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
 begin
-  // Преобразуем глобальные координаты курсора мыши в координаты внутри PaintBox
-  LocalPos := PaintBox1.ScreenToClient(Mouse.CursorPos);
-
-  x:=LocalPos.x div SIZE;
-  y:=LocalPos.y div SIZE;
-  OpenCell(x, y);
-  //field[x,y].open:=not field[x,y].open;
-
+  case Button of
+    mbLeft: OpenCell(X div SIZE, Y div SIZE);
+    mbRight: ToggleFlag(X div SIZE, Y div SIZE);
+  end;
   PaintBox1.Invalidate;
 end;
 
@@ -120,6 +116,7 @@ begin
       else case field[x,y].state of
         EmptyCell: DrawEmpty(cell);
         BombCell: DrawMine(cell);
+        FlagCell: DrawFlag(cell);
         1..8: DrawNum(cell, field[x, y].state);
         else ;
       end;
@@ -134,6 +131,15 @@ end;
 procedure TForm1.OpenCell(x, y: Integer);
 begin
   field[x,y].open:=not field[x,y].open;
+end;
+
+procedure TForm1.ToggleFlag(x, y: Integer);
+begin
+  //if not field[x ,y].open then bgin
+  //  field[x;
+  //end;
+  field[x, y].state:=FlagCell;// - field[x, y].state;
+  field[x, y].open:= True;
 end;
 
 procedure TForm1.DrawEmpty(cell: TRect);
@@ -197,6 +203,45 @@ begin
                            cx - r div 2 + 3, cy - r div 2 + 3);
 end;
 
+procedure TForm1.DrawFlag(cell: TRect);
+var
+  cx: Integer;
+  poleX, topY, botY, flagW, flagH: Integer;
+begin
+  DrawEmpty(cell);
+
+  cx := (cell.Left + cell.Right) div 2;
+
+  poleX  := cx;
+  topY   := cell.Top + SIZE div 4;
+  botY   := cell.Bottom - SIZE div 5;
+  flagW  := SIZE div 2;
+  flagH  := SIZE div 3;
+
+  // шест
+  PaintBox1.Canvas.Pen.Style := psSolid;
+  PaintBox1.Canvas.Pen.Color := clBlack;
+  PaintBox1.Canvas.Pen.Width := 2;
+  PaintBox1.Canvas.MoveTo(poleX, topY);
+  PaintBox1.Canvas.LineTo(poleX, botY);
+
+  // полотнище флага (треугольник)
+  PaintBox1.Canvas.Pen.Style := psClear;
+  PaintBox1.Canvas.Brush.Color := clRed;
+  PaintBox1.Canvas.Polygon([
+    Point(poleX, topY),
+    Point(poleX + flagW, topY + flagH div 2),
+    Point(poleX, topY + flagH)
+  ]);
+
+  // основание
+  PaintBox1.Canvas.Pen.Style := psSolid;
+  PaintBox1.Canvas.Pen.Color := clBlack;
+  PaintBox1.Canvas.Pen.Width := 2;
+  PaintBox1.Canvas.MoveTo(cx - SIZE div 4, botY);
+  PaintBox1.Canvas.LineTo(cx + SIZE div 4, botY);
+end;
+
 procedure TForm1.DrawClosed(cell: TRect);
 var
   p1, p2, p3, p4: TPoint;
@@ -222,35 +267,6 @@ begin
 
 end;
 
-procedure TForm1.CellMine(x, y: Integer);
-var
-  x0, x1, y0, y1:Integer;
-  box: Trect;
-  ts: TTextStyle;
-begin
-  x0 := x * SIZE;
-  x1 := x0 + SIZE - 1;
-  y0 := y * SIZE;
-  y1 := y0 + SIZE - 1;
-
-  PaintBox1.Canvas.Brush.Color:=ColorGray;
-  PaintBox1.Canvas.FillRect(x0, y0, x1, y1);
-
-  box := Rect(x0, y0, x1, y1);
-  PaintBox1.Canvas.Font.Color:=clRed;
-  PaintBox1.Canvas.Font.Size:=18;
-  PaintBox1.Canvas.Font.Style:=[fsBold];
-
-  ts := PaintBox1.Canvas.TextStyle;
-  ts.Alignment    := taCenter;       // По горизонтали: по центру
-  ts.Layout       := tlCenter;       // По вертикали: по центру
-  ts.SingleLine   := True;           // Обязательно для вертикального выравнивания
-  ts.Clipping     := False;          // Выключаем обрезку (на случай, если текст чуть больше box)
-
-  PaintBox1.Canvas.TextStyle := ts;
-  PaintBox1.Canvas.TextRect(box, box.left, box.top, IntToStr(Field[x,y].state));
-end;
-
 procedure TForm1.FieldInit;
 var
   x, y: Integer;
@@ -264,7 +280,4 @@ begin
   field[2, 1].state := 2;         field[2,1].open := False;
 end;
 
-
-
 end.
-
