@@ -5,7 +5,7 @@ unit Main;
 interface
 
 uses
-  Classes, SysUtils, Forms, Controls, Graphics, Dialogs, ExtCtrls;
+  Classes, SysUtils, Forms, Controls, Graphics, Dialogs, ExtCtrls, Math;
 
 type
   TCell = record
@@ -19,17 +19,18 @@ type
     PaintBox1: TPaintBox;
     procedure FormCreate(Sender: TObject);
     procedure FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+    procedure PaintBox1Click(Sender: TObject);
     procedure PaintBox1Paint(Sender: TObject);
-    procedure DrawNew(cell: TRect);
+    function GetCellRect(x, y:Integer): TRect;
+    procedure OpenCell(x, y: Integer);
+    procedure DrawClosed(cell: TRect);
     procedure DrawEmpty(cell: TRect);
     procedure DrawNum(cell: TRect; num: Integer);
-    procedure CellEmpty(x,y: Integer);
+    procedure DrawMine(cell: TRect);
+    //procedure CellEmpty(x,y: Integer);
     procedure CellMine(x,y: Integer);
     procedure FieldInit;
   private
-    //ColorGray:TColor;
-    //ColorWhite:TColor;
-    //ColorDark:TColor;
     XMAX: Integer;
     YMAX: Integer;
     SIZE: Integer;
@@ -45,7 +46,7 @@ const
   FlagCell  = -2;
   BombCell  = -1;
   //клетка по-умолчанию
-  DefaultCell: TCell = (state: NewCell; open: false);
+  DefaultCell: TCell = (state: EmptyCell; open: false);
   //цвета
   ColorGray = $C0C0C0;
   ColorWhite = $FFFFFF;
@@ -68,17 +69,11 @@ begin
   XMAX:=3;
   YMAX:=3;
   SIZE:=30;
-  //ColorGray := RGBToColor(192, 192, 192);
-  //ColorWhite:= RGBToColor(255, 255, 255);
-  //ColorDark := RGBToColor(128, 128, 128);
 
-  //form1.Width:=XMAX*SIZE;
   form1.ClientWidth:=XMAX*SIZE;
-  //form1.Height:=YMAX*SIZE;
   form1.ClientHeight:=YMAX*SIZE;
 
   SetLength(field,XMAX,YMAX);
-  //field[0,1].state:=1;
 
   ShowHidden := False;
   FieldInit;
@@ -90,52 +85,55 @@ begin
   if (ssCtrl in Shift) and (Key = Ord('H')) then
   begin
     ShowHidden := not ShowHidden; // Переключаем режим (вкл/выкл)
-
     PaintBox1.Invalidate; // Принудительно заставляем PaintBox перерисоваться с новыми условиями
-
     Key := 0; // Сообщаем системе, что кнопка обработана
   end;
+end;
+
+procedure TForm1.PaintBox1Click(Sender: TObject);
+var
+  LocalPos: TPoint;
+  x, y: Integer;
+begin
+  // Преобразуем глобальные координаты курсора мыши в координаты внутри PaintBox
+  LocalPos := PaintBox1.ScreenToClient(Mouse.CursorPos);
+
+  x:=LocalPos.x div SIZE;
+  y:=LocalPos.y div SIZE;
+  OpenCell(x, y);
+  //field[x,y].open:=not field[x,y].open;
+
+  PaintBox1.Invalidate;
 end;
 
 procedure TForm1.PaintBox1Paint(Sender: TObject);
 var
   x, y: Integer;
-  x0, y0, x1, y1:Integer;
   cell: TRect;
 begin
-
   for y:=0 to YMAX-1 do
     for x := 0 to XMAX - 1 do begin
-      x0 :=  x * SIZE;
-      x1 := x0 + SIZE - 1;
-      y0 := y * SIZE;
-      y1 := y0 + SIZE - 1;
-      cell := Rect(x0, y0, x1, y1);
+      cell:=GetCellRect(x,y);
 
       if not field[x, y].open then
-         DrawNew(cell)
+         DrawClosed(cell)
       else case field[x,y].state of
         EmptyCell: DrawEmpty(cell);
-        1..3: DrawNum(cell, field[x, y].state);
+        BombCell: DrawMine(cell);
+        1..8: DrawNum(cell, field[x, y].state);
         else ;
       end;
-      //if field[x,y].state=-1 then begin
-      //  CellEmpty(x,y);
-      //end
-      //else if field[x,y].state=0 then begin
-      //  DrawNew(cell);
-      //end
-      //else if field[x,y].state=9 then begin
-      //  //CellEmpty(x,y);
-      //end
-      //else if field[x,y].state > 0 then begin
-      //  CellMine(x,y);
-      //end
-      //else if field[x,y].state > 0 then begin
-      //  //CellMine(x,y);
-      //end;
   end;
+end;
 
+function TForm1.GetCellRect(x, y: Integer): TRect;
+begin
+  result := Rect(x*SIZE, y*SIZE, (x+1)*SIZE-1 , (y+1)*SIZE-1);
+end;
+
+procedure TForm1.OpenCell(x, y: Integer);
+begin
+  field[x,y].open:=not field[x,y].open;
 end;
 
 procedure TForm1.DrawEmpty(cell: TRect);
@@ -164,7 +162,42 @@ begin
   PaintBox1.Canvas.TextRect(cell, cell.left, cell.top, IntToStr(num));
 end;
 
-procedure TForm1.DrawNew(cell: TRect);
+procedure TForm1.DrawMine(cell: TRect);
+var
+  cx, cy, r: Integer;
+  i: Integer;
+  dx, dy: Double;
+begin
+  DrawEmpty(cell);
+
+  cx := (cell.Left + cell.Right) div 2;
+  cy := (cell.Top + cell.Bottom) div 2;
+  r  := SIZE div 3;
+
+  // шипы (8 линий от центра наружу)
+  PaintBox1.Canvas.Pen.Style := psSolid;
+  PaintBox1.Canvas.Pen.Color := clBlack;
+  PaintBox1.Canvas.Pen.Width := 2;
+  for i := 0 to 7 do
+  begin
+    dx := Cos(i * Pi / 4);
+    dy := Sin(i * Pi / 4);
+    PaintBox1.Canvas.MoveTo(cx + Round(r * 0.5 * dx), cy + Round(r * 0.5 * dy));
+    PaintBox1.Canvas.LineTo(cx + Round((r + 4) * dx), cy + Round((r + 4) * dy));
+  end;
+
+  // корпус мины
+  PaintBox1.Canvas.Pen.Style := psClear;
+  PaintBox1.Canvas.Brush.Color := clBlack;
+  PaintBox1.Canvas.Ellipse(cx - r, cy - r, cx + r, cy + r);
+
+  // блик
+  PaintBox1.Canvas.Brush.Color := clWhite;
+  PaintBox1.Canvas.Ellipse(cx - r div 2 - 1, cy - r div 2 - 1,
+                           cx - r div 2 + 3, cy - r div 2 + 3);
+end;
+
+procedure TForm1.DrawClosed(cell: TRect);
 var
   p1, p2, p3, p4: TPoint;
   p5, p6, p7, p8: TPoint;
@@ -187,38 +220,6 @@ begin
   PaintBox1.Canvas.Brush.Color:=ColorDark;
   PaintBox1.Canvas.Polygon([p2, p3, p4, p8, p7, p6]);
 
-end;
-
-procedure TForm1.CellEmpty(x, y: Integer);
-var
-  p1,p2,p3,p4,p5,p6,p7,p8: TPoint;
-  x0, x1, y0, y1: Integer;
-  b: Integer;
-begin
-  b:=4;
-  x0 :=  x * SIZE;
-  x1 := x0 + SIZE ;
-  y0 := y * SIZE;
-  y1 := y0 + SIZE  ;
-
-  p1:=Point(x0, y0);
-  p2:=Point(x0, y1);
-  p3:=Point(x1, y1);
-  p4:=Point(x1, y0);
-
-  p5:=Point(p1.x+b, p1.y+b);
-  p6:=Point(p2.x+b, p2.y-b);
-  p7:=Point(p3.x-b, p3.y-b);
-  p8:=Point(p4.x-b, p4.y+b);
-
-  PaintBox1.Canvas.Brush.Color:=ColorGray;
-  PaintBox1.Canvas.FillRect(x0, y0, x1,y1);
-
-  PaintBox1.Canvas.Pen.Style := psClear; //отключение обводки полигонов
-  PaintBox1.Canvas.Brush.Color:=ColorWhite;
-  PaintBox1.Canvas.Polygon([p4,p1,p2,p6,p5,p8]);
-  PaintBox1.Canvas.Brush.Color:=ColorDark;
-  PaintBox1.Canvas.Polygon([p2,p3,p4,p8,p7,p6]);
 end;
 
 procedure TForm1.CellMine(x, y: Integer);
@@ -257,17 +258,10 @@ begin
   for y:=0 to YMAX - 1 do
     for x:= 0 to XMAX - 1 do
       field[x, y] := DefaultCell;
-  //field[0, 0].state := NewCell; //NewCell
-  //field[0, 1].state := NewCell;
-  //field[0, 2].state := NewCell;
-  //field[1, 0].state := NewCell;
-  //field[1, 1].state := NewCell;
-  //field[1, 2].state := NewCell;
-  //field[2, 0].state := NewCell;
-  //field[2, 1].state := NewCell;
-  field[0, 1].state := 1;         field[0,1].open := True;
-  field[1, 1].state := EmptyCell; field[1,1].open := True;
-  field[2, 1].state := 2;         field[2,1].open := True;
+
+  field[0, 1].state := 1;         field[0,1].open := False;
+  field[1, 1].state :=BombCell;
+  field[2, 1].state := 2;         field[2,1].open := False;
 end;
 
 

@@ -17,6 +17,7 @@ object Form1: TForm1
     Top = 0
     Width = 320
     Align = alClient
+    OnClick = PaintBox1Click
     OnPaint = PaintBox1Paint
   end
 end

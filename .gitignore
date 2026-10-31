@@ -5,5 +5,5 @@
 !*.ico
 !*.lpi
 !*.lpr
-!*.lps
+#!*.lps
 !*.res
