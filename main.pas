@@ -11,7 +11,9 @@ type
   TCell = record
     state:Integer;
     open:Boolean;
+    flag:Boolean;
   end;
+  TGameState=(NEW, STARTED, FINISH);
 
   { TForm1 }
 
@@ -19,10 +21,10 @@ type
     PaintBox1: TPaintBox;
     procedure FormCreate(Sender: TObject);
     procedure FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
-    //procedure PaintBox1Click(Sender: TObject);
     procedure PaintBox1MouseDown(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
     procedure PaintBox1Paint(Sender: TObject);
     function GetCellRect(x, y:Integer): TRect;
+    procedure GenerateField(curX, curY:Integer);
     procedure OpenCell(x, y: Integer);
     procedure ToggleFlag(x, y: Integer);
     procedure DrawClosed(cell: TRect);
@@ -30,26 +32,39 @@ type
     procedure DrawNum(cell: TRect; num: Integer);
     procedure DrawMine(cell: TRect);
     procedure DrawFlag(cell: TRect);
-    //procedure CellEmpty(x,y: Integer);
-    //procedure CellMine(x,y: Integer);
     procedure FieldInit;
   private
     XMAX: Integer;
     YMAX: Integer;
     SIZE: Integer;
+    BOMBMAX: Integer;
     ShowHidden: Boolean;
+    State: TGameState;
   public
 
   end;
 
 const
+// Индексы соответствуют цифрам от 1 до 8
+  MINESWEEPER_COLORS: array[1..8] of LongWord = (
+    $FF0000, // 1 - Синий (Blue)
+    $008000, // 2 - Зелёный (Green)
+    $0000FF, // 3 - Красный (Red)
+    $800000, // 4 - Тёмно-синий (Navy)
+    $000080, // 5 - Бордовый (Maroon)
+    $808000, // 6 - Бирюзовый (Teal)
+    $000000, // 7 - Чёрный (Black)
+    $808080  // 8 - Серый (Gray)
+  );
+
+
   //типы клеток
   NewCell   = -4;
   EmptyCell = -3;
   FlagCell  = -2;
   BombCell  = -1;
   //клетка по-умолчанию
-  DefaultCell: TCell = (state: EmptyCell; open: false);
+  DefaultCell: TCell = (state: EmptyCell; open: false; flag: false);
   //цвета
   ColorGray = $C0C0C0;
   ColorWhite = $FFFFFF;
@@ -69,12 +84,15 @@ implementation
 
 procedure TForm1.FormCreate(Sender: TObject);
 begin
-  XMAX:=3;
-  YMAX:=3;
+  XMAX:=5;
+  YMAX:=5;
   SIZE:=30;
+  BOMBMAX:=20;
 
   form1.ClientWidth:=XMAX*SIZE;
   form1.ClientHeight:=YMAX*SIZE;
+
+  State:=NEW;
 
   SetLength(field,XMAX,YMAX);
 
@@ -82,7 +100,7 @@ begin
   FieldInit;
 end;
 
-procedure TForm1.FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+procedure TForm1.FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);      //проверка на CTRL-H
 begin
   // Проверяем, что зажат Ctrl и нажата клавиша H
   if (ssCtrl in Shift) and (Key = Ord('H')) then
@@ -93,7 +111,7 @@ begin
   end;
 end;
 
-procedure TForm1.PaintBox1MouseDown(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
+procedure TForm1.PaintBox1MouseDown(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer); // MouseClick
 begin
   case Button of
     mbLeft: OpenCell(X div SIZE, Y div SIZE);
@@ -102,7 +120,7 @@ begin
   PaintBox1.Invalidate;
 end;
 
-procedure TForm1.PaintBox1Paint(Sender: TObject);
+procedure TForm1.PaintBox1Paint(Sender: TObject);        //отрисовка поля
 var
   x, y: Integer;
   cell: TRect;
@@ -112,11 +130,13 @@ begin
       cell:=GetCellRect(x,y);
 
       if not field[x, y].open then
-         DrawClosed(cell)
+        if field[x,y].flag then
+          DrawFlag(cell)
+        else
+          DrawClosed(cell)
       else case field[x,y].state of
         EmptyCell: DrawEmpty(cell);
         BombCell: DrawMine(cell);
-        FlagCell: DrawFlag(cell);
         1..8: DrawNum(cell, field[x, y].state);
         else ;
       end;
@@ -128,18 +148,53 @@ begin
   result := Rect(x*SIZE, y*SIZE, (x+1)*SIZE-1 , (y+1)*SIZE-1);
 end;
 
+procedure TForm1.GenerateField(curX, curY: Integer);           //генерация поля
+var
+  x, y: Integer;
+  b: Integer;
+  cnt, c, r: Integer;
+begin
+  //
+  //ГЕНЕРАЦИЯ ПОЛЯ!!!!!!!!!!!!!!!!!!
+  //
+  Randomize;
+  cnt:=0;
+  while cnt<BOMBMAX do begin
+    x:= Random(XMAX);
+    y:= Random(YMAX);
+    if Field[x,y].State = EmptyCell then begin
+      if (x=curX) and (y=curY) then continue;
+      Field[x,y].State:=BombCell;
+      cnt:=cnt + 1;
+    end;
+  end;
+
+
+  For x:= 0 to XMAX - 1 do
+    For y:=0 to YMAX - 1 do begin
+      field[x,y].open:=True;
+    end;
+  PaintBox1.Invalidate;
+end;
+
 procedure TForm1.OpenCell(x, y: Integer);
 begin
-  field[x,y].open:=not field[x,y].open;
+  if State = NEW then begin
+    GenerateField(x,y);
+    State := STARTED;
+  end
+  else
+    field[x,y].open:=not field[x,y].open;
 end;
 
 procedure TForm1.ToggleFlag(x, y: Integer);
 begin
+  field[x,y].flag:= not field[x,y].flag;
   //if not field[x ,y].open then bgin
   //  field[x;
   //end;
-  field[x, y].state:=FlagCell;// - field[x, y].state;
-  field[x, y].open:= True;
+  //field[x, y].state:=FlagCell;// - field[x, y].state;
+  //field[x, y].open:= True;
 end;
 
 procedure TForm1.DrawEmpty(cell: TRect);
@@ -154,7 +209,7 @@ var
 begin
   DrawEmpty(cell);
 
-  PaintBox1.Canvas.Font.Color:=clRed; //цвет цифры
+  PaintBox1.Canvas.Font.Color:=MINESWEEPER_COLORS[Num];//clRed; //цвет цифры
   PaintBox1.Canvas.Font.Size:=18;
   PaintBox1.Canvas.Font.Style:=[fsBold];
 
@@ -275,9 +330,9 @@ begin
     for x:= 0 to XMAX - 1 do
       field[x, y] := DefaultCell;
 
-  field[0, 1].state := 1;         field[0,1].open := False;
-  field[1, 1].state :=BombCell;
-  field[2, 1].state := 2;         field[2,1].open := False;
+  //field[0, 1].state := 1;         field[0,1].open := False;
+  //field[1, 1].state :=BombCell;
+  //field[2, 1].state := 2;         field[2,1].open := False;
 end;
 
 end.
