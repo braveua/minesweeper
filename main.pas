@@ -38,6 +38,7 @@ type
     YMAX: Integer;
     SIZE: Integer;
     BOMBMAX: Integer;
+    SAFERADIUS: Integer;
     ShowHidden: Boolean;
     State: TGameState;
   public
@@ -59,9 +60,7 @@ const
 
 
   //типы клеток
-  NewCell   = -4;
-  EmptyCell = -3;
-  FlagCell  = -2;
+  EmptyCell = -0;
   BombCell  = -1;
   //клетка по-умолчанию
   DefaultCell: TCell = (state: EmptyCell; open: false; flag: false);
@@ -87,7 +86,8 @@ begin
   XMAX:=5;
   YMAX:=5;
   SIZE:=30;
-  BOMBMAX:=20;
+  BOMBMAX:=4;
+  SAFERADIUS:=2;
 
   form1.ClientWidth:=XMAX*SIZE;
   form1.ClientHeight:=YMAX*SIZE;
@@ -151,6 +151,7 @@ end;
 procedure TForm1.GenerateField(curX, curY: Integer);           //генерация поля
 var
   x, y: Integer;
+  dx, dy: Integer;
   b: Integer;
   cnt, c, r: Integer;
 begin
@@ -159,22 +160,40 @@ begin
   //
   Randomize;
   cnt:=0;
+  //Генерируем мины
   while cnt<BOMBMAX do begin
     x:= Random(XMAX);
     y:= Random(YMAX);
     if Field[x,y].State = EmptyCell then begin
-      if (x=curX) and (y=curY) then continue;
+      //if (x=curX) and (y=curY) then continue;
+      if (Abs(curX-x)<SAFERADIUS) and (Abs(curY-y)<SAFERADIUS) then continue;
       Field[x,y].State:=BombCell;
       cnt:=cnt + 1;
     end;
   end;
 
-
-  For x:= 0 to XMAX - 1 do
-    For y:=0 to YMAX - 1 do begin
-      field[x,y].open:=True;
+  //Рачет мин в соседник клетках
+  for y:=0 to XMAX - 1 do
+    for x:=0 to YMAX - 1 do  begin
+      if field[x, y].state = BombCell then continue;
+      for dx:=-1 to 1 do
+        for dy:=-1 to 1 do begin
+          c:=x+dx;
+          r:=y+dy;
+          if (c < 0) or (c > XMAX - 1) then continue;
+          if (r < 0) or (r > YMAX - 1) then continue;
+          if field[c,r].state=BombCell then
+            inc(field[x,y].state);
+        end;
     end;
-  PaintBox1.Invalidate;
+
+  ////Открываем все поле (для теста)
+  //For x:= 0 to XMAX - 1 do
+  //  For y:=0 to YMAX - 1 do begin
+  //    field[x,y].open:=True;
+  //  end;
+  ////Рисуем поле
+  //PaintBox1.Invalidate;
 end;
 
 procedure TForm1.OpenCell(x, y: Integer);
@@ -182,6 +201,7 @@ begin
   if State = NEW then begin
     GenerateField(x,y);
     State := STARTED;
+    field[x,y].open := True;
   end
   else
     field[x,y].open:=not field[x,y].open;
