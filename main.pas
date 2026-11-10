@@ -33,6 +33,7 @@ type
     procedure DrawMine(cell: TRect);
     procedure DrawFlag(cell: TRect);
     procedure FieldInit;
+    procedure GameOver;
   private
     XMAX: Integer;
     YMAX: Integer;
@@ -197,14 +198,27 @@ begin
 end;
 
 procedure TForm1.OpenCell(x, y: Integer);
+var
+  dx, dy: integer;
 begin
+  if (x<0) or (x>XMAX-1) or (y<0) or (y>YMAX-1) then exit;
+  if field[x,y].open then exit;
   if State = NEW then begin
     GenerateField(x,y);
     State := STARTED;
-    field[x,y].open := True;
-  end
-  else
-    field[x,y].open:=not field[x,y].open;
+  end;
+  if field[x, y].state = BombCell then
+    GameOver; //game over
+
+  if field[x,y].state = EmptyCell then begin
+    for dx:= x-1 to x+1 do
+      for dy:= y-1 to y+1 do begin
+        writeln(dx, ' : ',dy);
+        OpenCell(dx,dy);
+      end;
+  end;
+  //field[x,y].open:=not field[x,y].open;
+  field[x,y].open := True;
 end;
 
 procedure TForm1.ToggleFlag(x, y: Integer);
@@ -353,6 +367,11 @@ begin
   //field[0, 1].state := 1;         field[0,1].open := False;
   //field[1, 1].state :=BombCell;
   //field[2, 1].state := 2;         field[2,1].open := False;
+end;
+
+procedure TForm1.GameOver;
+begin
+
 end;
 
 end.
