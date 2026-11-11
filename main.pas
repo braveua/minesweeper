@@ -87,7 +87,7 @@ begin
   XMAX:=5;
   YMAX:=5;
   SIZE:=30;
-  BOMBMAX:=4;
+  BOMBMAX:=3;
   SAFERADIUS:=2;
 
   form1.ClientWidth:=XMAX*SIZE;
@@ -153,7 +153,6 @@ procedure TForm1.GenerateField(curX, curY: Integer);           //генерац�
 var
   x, y: Integer;
   dx, dy: Integer;
-  b: Integer;
   cnt, c, r: Integer;
 begin
   //
@@ -210,25 +209,20 @@ begin
   if field[x, y].state = BombCell then
     GameOver; //game over
 
+  field[x,y].open := True;
+
   if field[x,y].state = EmptyCell then begin
     for dx:= x-1 to x+1 do
       for dy:= y-1 to y+1 do begin
-        writeln(dx, ' : ',dy);
+        if (x=dx) and (y=dy) then continue;
         OpenCell(dx,dy);
       end;
   end;
-  //field[x,y].open:=not field[x,y].open;
-  field[x,y].open := True;
 end;
 
 procedure TForm1.ToggleFlag(x, y: Integer);
 begin
   field[x,y].flag:= not field[x,y].flag;
-  //if not field[x ,y].open then bgin
-  //  field[x;
-  //end;
-  //field[x, y].state:=FlagCell;// - field[x, y].state;
-  //field[x, y].open:= True;
 end;
 
 procedure TForm1.DrawEmpty(cell: TRect);
@@ -363,10 +357,6 @@ begin
   for y:=0 to YMAX - 1 do
     for x:= 0 to XMAX - 1 do
       field[x, y] := DefaultCell;
-
-  //field[0, 1].state := 1;         field[0,1].open := False;
-  //field[1, 1].state :=BombCell;
-  //field[2, 1].state := 2;         field[2,1].open := False;
 end;
 
 procedure TForm1.GameOver;
