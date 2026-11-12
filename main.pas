@@ -13,7 +13,7 @@ type
     open:Boolean;
     flag:Boolean;
   end;
-  TGameState=(NEW, STARTED, FINISH);
+  TGameState=(gsNEW, gsSTART, gsFINISH);
 
   { TForm1 }
 
@@ -23,6 +23,17 @@ type
     procedure FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
     procedure PaintBox1MouseDown(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
     procedure PaintBox1Paint(Sender: TObject);
+
+  private
+    field: array of array of TCell;
+    maxx: Integer;
+    maxy: Integer;
+    CellSize: Integer;
+    bombmax: Integer;
+    safeRadius: Integer;
+    ShowHidden: Boolean;
+    State: TGameState;
+
     function GetCellRect(x, y:Integer): TRect;
     procedure GenerateField(curX, curY:Integer);
     procedure OpenCell(x, y: Integer);
@@ -33,15 +44,8 @@ type
     procedure DrawMine(cell: TRect);
     procedure DrawFlag(cell: TRect);
     procedure FieldInit;
+    procedure CheckEnd;
     procedure GameOver;
-  private
-    XMAX: Integer;
-    YMAX: Integer;
-    SIZE: Integer;
-    BOMBMAX: Integer;
-    SAFERADIUS: Integer;
-    ShowHidden: Boolean;
-    State: TGameState;
   public
 
   end;
@@ -59,9 +63,8 @@ const
     $808080  // 8 - Серый (Gray)
   );
 
-
   //типы клеток
-  EmptyCell = -0;
+  EmptyCell = 0;
   BombCell  = -1;
   //клетка по-умолчанию
   DefaultCell: TCell = (state: EmptyCell; open: false; flag: false);
@@ -74,7 +77,7 @@ const
 
 var
   Form1: TForm1;
-  field: array of array of TCell;
+
 
 implementation
 
@@ -84,18 +87,18 @@ implementation
 
 procedure TForm1.FormCreate(Sender: TObject);
 begin
-  XMAX:=5;
-  YMAX:=5;
-  SIZE:=30;
-  BOMBMAX:=3;
-  SAFERADIUS:=2;
+  maxx := 5;
+  maxy := 5;
+  CellSize := 30;
+  bombmax := 3;
+  safeRadius := 2;
 
-  form1.ClientWidth:=XMAX*SIZE;
-  form1.ClientHeight:=YMAX*SIZE;
+  form1.ClientWidth := maxx * CellSize;
+  form1.ClientHeight := maxy * CellSize;
 
-  State:=NEW;
+  State:=gsNEW;
 
-  SetLength(field,XMAX,YMAX);
+  SetLength(field, maxx, maxy);
 
   ShowHidden := False;
   FieldInit;
@@ -115,8 +118,8 @@ end;
 procedure TForm1.PaintBox1MouseDown(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer); // MouseClick
 begin
   case Button of
-    mbLeft: OpenCell(X div SIZE, Y div SIZE);
-    mbRight: ToggleFlag(X div SIZE, Y div SIZE);
+    mbLeft: OpenCell(X div CellSize, Y div CellSize);
+    mbRight: ToggleFlag(X div CellSize, Y div CellSize);
   end;
   PaintBox1.Invalidate;
 end;
@@ -126,8 +129,8 @@ var
   x, y: Integer;
   cell: TRect;
 begin
-  for y:=0 to YMAX-1 do
-    for x := 0 to XMAX - 1 do begin
+  for y:=0 to maxy - 1 do
+    for x := 0 to maxx - 1 do begin
       cell:=GetCellRect(x,y);
 
       if not field[x, y].open then
@@ -146,7 +149,7 @@ end;
 
 function TForm1.GetCellRect(x, y: Integer): TRect;
 begin
-  result := Rect(x*SIZE, y*SIZE, (x+1)*SIZE-1 , (y+1)*SIZE-1);
+  result := Rect(x * CellSize, y * CellSize, (x + 1) * CellSize - 1, (y + 1) * CellSize - 1);
 end;
 
 procedure TForm1.GenerateField(curX, curY: Integer);           //генерация поля
@@ -161,50 +164,42 @@ begin
   Randomize;
   cnt:=0;
   //Генерируем мины
-  while cnt<BOMBMAX do begin
-    x:= Random(XMAX);
-    y:= Random(YMAX);
+  while cnt < bombmax do begin
+    x:= Random(maxx);
+    y:= Random(maxy);
     if Field[x,y].State = EmptyCell then begin
       //if (x=curX) and (y=curY) then continue;
-      if (Abs(curX-x)<SAFERADIUS) and (Abs(curY-y)<SAFERADIUS) then continue;
+      if (Abs(curX - x) < safeRadius) and (Abs(curY - y) < safeRadius) then continue;
       Field[x,y].State:=BombCell;
       cnt:=cnt + 1;
     end;
   end;
 
-  //Рачет мин в соседник клетках
-  for y:=0 to XMAX - 1 do
-    for x:=0 to YMAX - 1 do  begin
+  //Раcчет мин в соседних клетках
+  for x:=0 to maxx - 1 do
+    for y:=0 to maxy - 1 do  begin
       if field[x, y].state = BombCell then continue;
       for dx:=-1 to 1 do
         for dy:=-1 to 1 do begin
           c:=x+dx;
           r:=y+dy;
-          if (c < 0) or (c > XMAX - 1) then continue;
-          if (r < 0) or (r > YMAX - 1) then continue;
+          if (c < 0) or (c > maxx - 1) then continue;
+          if (r < 0) or (r > maxy - 1) then continue;
           if field[c,r].state=BombCell then
             inc(field[x,y].state);
         end;
     end;
-
-  ////Открываем все поле (для теста)
-  //For x:= 0 to XMAX - 1 do
-  //  For y:=0 to YMAX - 1 do begin
-  //    field[x,y].open:=True;
-  //  end;
-  ////Рисуем поле
-  //PaintBox1.Invalidate;
 end;
 
 procedure TForm1.OpenCell(x, y: Integer);
 var
   dx, dy: integer;
 begin
-  if (x<0) or (x>XMAX-1) or (y<0) or (y>YMAX-1) then exit;
+  if (x<0) or (x > maxx - 1) or (y<0) or (y > maxy - 1) then exit;
   if field[x,y].open then exit;
-  if State = NEW then begin
+  if State = gsNEW then begin
     GenerateField(x,y);
-    State := STARTED;
+    State := gsSTART;
   end;
   if field[x, y].state = BombCell then
     GameOver; //game over
@@ -261,7 +256,7 @@ begin
 
   cx := (cell.Left + cell.Right) div 2;
   cy := (cell.Top + cell.Bottom) div 2;
-  r  := SIZE div 3;
+  r  := CellSize div 3;
 
   // шипы (8 линий от центра наружу)
   PaintBox1.Canvas.Pen.Style := psSolid;
@@ -296,10 +291,10 @@ begin
   cx := (cell.Left + cell.Right) div 2;
 
   poleX  := cx;
-  topY   := cell.Top + SIZE div 4;
-  botY   := cell.Bottom - SIZE div 5;
-  flagW  := SIZE div 2;
-  flagH  := SIZE div 3;
+  topY   := cell.Top + CellSize div 4;
+  botY   := cell.Bottom - CellSize div 5;
+  flagW  := CellSize div 2;
+  flagH  := CellSize div 3;
 
   // шест
   PaintBox1.Canvas.Pen.Style := psSolid;
@@ -321,8 +316,8 @@ begin
   PaintBox1.Canvas.Pen.Style := psSolid;
   PaintBox1.Canvas.Pen.Color := clBlack;
   PaintBox1.Canvas.Pen.Width := 2;
-  PaintBox1.Canvas.MoveTo(cx - SIZE div 4, botY);
-  PaintBox1.Canvas.LineTo(cx + SIZE div 4, botY);
+  PaintBox1.Canvas.MoveTo(cx - CellSize div 4, botY);
+  PaintBox1.Canvas.LineTo(cx + CellSize div 4, botY);
 end;
 
 procedure TForm1.DrawClosed(cell: TRect);
@@ -354,14 +349,27 @@ procedure TForm1.FieldInit;
 var
   x, y: Integer;
 begin
-  for y:=0 to YMAX - 1 do
-    for x:= 0 to XMAX - 1 do
+  for y:=0 to maxy - 1 do
+    for x:= 0 to maxx - 1 do
       field[x, y] := DefaultCell;
 end;
 
-procedure TForm1.GameOver;
+procedure TForm1.CheckEnd;
 begin
+  //проверка окончания игры
+end;
 
+procedure TForm1.GameOver;
+var
+  x, y: Integer;
+begin
+  State := gsFINISH;
+  for x:= 0 to maxx - 1 do
+    for y := 0 to maxy - 1 do
+      field[x, y].open := True;
+  PaintBox1.Invalidate;
+  ShowMessage('Game Over');
+  FieldInit;
 end;
 
 end.
