@@ -20,7 +20,6 @@ type
   TForm1 = class(TForm)
     PaintBox1: TPaintBox;
     procedure FormCreate(Sender: TObject);
-    procedure FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
     procedure PaintBox1MouseDown(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
     procedure PaintBox1Paint(Sender: TObject);
 
@@ -31,12 +30,13 @@ type
     CellSize: Integer;
     bombmax: Integer;
     safeRadius: Integer;
-    ShowHidden: Boolean;
+    //ShowHidden: Boolean;
     State: TGameState;
 
     function GetCellRect(x, y:Integer): TRect;
     procedure GenerateField(curX, curY:Integer);
     procedure OpenCell(x, y: Integer);
+    procedure OpenNeighbor(x, y: Integer);
     procedure ToggleFlag(x, y: Integer);
     procedure DrawClosed(cell: TRect);
     procedure DrawEmpty(cell: TRect);
@@ -100,27 +100,24 @@ begin
 
   SetLength(field, maxx, maxy);
 
-  ShowHidden := False;
+  //ShowHidden := False;
   FieldInit;
 end;
 
-procedure TForm1.FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);      //проверка на CTRL-H
-begin
-  // Проверяем, что зажат Ctrl и нажата клавиша H
-  if (ssCtrl in Shift) and (Key = Ord('H')) then
-  begin
-    ShowHidden := not ShowHidden; // Переключаем режим (вкл/выкл)
-    PaintBox1.Invalidate; // Принудительно заставляем PaintBox перерисоваться с новыми условиями
-    Key := 0; // Сообщаем системе, что кнопка обработана
-  end;
-end;
-
 procedure TForm1.PaintBox1MouseDown(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer); // MouseClick
+var
+  xcell, ycell: Integer;
 begin
-  case Button of
-    mbLeft: OpenCell(X div CellSize, Y div CellSize);
-    mbRight: ToggleFlag(X div CellSize, Y div CellSize);
+  xcell:=X div CellSize;
+  ycell:=Y div CellSize;
+  if (ssLeft in Shift) and (ssRight in Shift) and (field[xcell, ycell].open) then begin
+    OpenNeighbor(xcell, ycell);
+  end
+  else case Button of
+    mbLeft: OpenCell(xcell, ycell);
+    mbRight: ToggleFlag(xcell, ycell);
   end;
+
   PaintBox1.Invalidate;
 end;
 
@@ -213,6 +210,11 @@ begin
         OpenCell(dx,dy);
       end;
   end;
+end;
+
+procedure TForm1.OpenNeighbor(x, y: Integer);
+begin
+  writeln('both button');
 end;
 
 procedure TForm1.ToggleFlag(x, y: Integer);
