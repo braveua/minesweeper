@@ -65,6 +65,7 @@ const
   //типы клеток
   EmptyCell = 0;
   BombCell  = -1;
+  BoomCell  = -2;
   //клетка по-умолчанию
   DefaultCell: TCell = (state: EmptyCell; open: false; flag: false);
   //цвета
@@ -134,13 +135,14 @@ begin
       else case field[x,y].state of
         EmptyCell: DrawEmpty(cell);
         BombCell: DrawMine(cell);
+        BoomCell: DrawMine(cell, True);
         1..8: DrawNum(cell, field[x, y].state);
         else ;
       end;
   end;
 end;
 
-function TForm1.GetCellRect(x, y: Integer): TRect;
+function TForm1.GetCellRect(x, y: Integer): TRect;  //Rect по XY
 begin
   result := Rect(x * CellSize, y * CellSize, (x + 1) * CellSize - 1, (y + 1) * CellSize - 1);
 end;
@@ -188,12 +190,14 @@ var
   dx, dy: integer;
 begin
   if (x<0) or (x > maxx - 1) or (y<0) or (y > maxy - 1) then exit;
-  if field[x,y].open then exit;
+  if field[x, y].open then exit;
+  if field[x, y].flag then exit;
   if State = gsNEW then begin
     GenerateField(x,y);
     State := gsSTART;
   end;
   if field[x, y].state = BombCell then begin
+    field[x, y].state := BoomCell;
     GameOver; //game over
     exit;
   end;
@@ -214,12 +218,13 @@ begin
 
 end;
 
-procedure TForm1.ToggleFlag(x, y: Integer);
+procedure TForm1.ToggleFlag(x, y: Integer); //Установка флажка
 begin
-  field[x,y].flag:= not field[x,y].flag;
+  if not field[x, y].open then
+    field[x,y].flag:= not field[x,y].flag;
 end;
 
-procedure TForm1.DrawEmpty(cell: TRect; boom: Boolean);
+procedure TForm1.DrawEmpty(cell: TRect; boom: Boolean);   //пустая ячейка
 begin
   if boom then
     PaintBox1.Canvas.Brush.Color:=clRed
@@ -228,7 +233,7 @@ begin
   PaintBox1.Canvas.FillRect(cell);
 end;
 
-procedure TForm1.DrawNum(cell: TRect; num: Integer);
+procedure TForm1.DrawNum(cell: TRect; num: Integer);      //ячейка с цифрой
 var
   ts: TTextStyle;
 begin
@@ -248,7 +253,7 @@ begin
   PaintBox1.Canvas.TextRect(cell, cell.left, cell.top, IntToStr(num));
 end;
 
-procedure TForm1.DrawMine(cell: TRect; boom: Boolean);
+procedure TForm1.DrawMine(cell: TRect; boom: Boolean);   //Мина
 var
   cx, cy, r: Integer;
   i: Integer;
@@ -283,7 +288,7 @@ begin
                            cx - r div 2 + 3, cy - r div 2 + 3);
 end;
 
-procedure TForm1.DrawFlag(cell: TRect);
+procedure TForm1.DrawFlag(cell: TRect);     //Ячейка с флагом
 var
   cx: Integer;
   poleX, topY, botY, flagW, flagH: Integer;
@@ -322,7 +327,7 @@ begin
   PaintBox1.Canvas.LineTo(cx + CellSize div 4, botY);
 end;
 
-procedure TForm1.DrawClosed(cell: TRect);
+procedure TForm1.DrawClosed(cell: TRect);   //Закрытая ячейка
 var
   p1, p2, p3, p4: TPoint;
   p5, p6, p7, p8: TPoint;
@@ -347,7 +352,7 @@ begin
 
 end;
 
-procedure TForm1.FieldInit;
+procedure TForm1.FieldInit;                 //Инициализация поля
 var
   x, y: Integer;
 begin
@@ -362,7 +367,7 @@ begin
   //проверка окончания игры
 end;
 
-procedure TForm1.GameOver;
+procedure TForm1.GameOver;                  // Конец игры
 var
   x, y: Integer;
 begin
@@ -371,7 +376,7 @@ begin
     for y := 0 to maxy - 1 do
       field[x, y].open := True;
   PaintBox1.Invalidate;
-  ShowMessage('Game Over');
+  ShowMessagePos('Game Over', 300, 200);
   State := gsNew;
   FieldInit;
 end;

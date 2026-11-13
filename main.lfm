@@ -10,7 +10,6 @@ object Form1: TForm1
   Position = poDesktopCenter
   LCLVersion = '4.8.0.0'
   OnCreate = FormCreate
-  OnKeyDown = FormKeyDown
   object PaintBox1: TPaintBox
     Left = 0
     Height = 240
