@@ -30,7 +30,6 @@ type
     CellSize: Integer;
     bombmax: Integer;
     safeRadius: Integer;
-    //ShowHidden: Boolean;
     State: TGameState;
 
     function GetCellRect(x, y:Integer): TRect;
@@ -39,9 +38,9 @@ type
     procedure OpenNeighbor(x, y: Integer);
     procedure ToggleFlag(x, y: Integer);
     procedure DrawClosed(cell: TRect);
-    procedure DrawEmpty(cell: TRect);
+    procedure DrawEmpty(cell: TRect; boom: Boolean=False);
     procedure DrawNum(cell: TRect; num: Integer);
-    procedure DrawMine(cell: TRect);
+    procedure DrawMine(cell: TRect; boom: Boolean=False);
     procedure DrawFlag(cell: TRect);
     procedure FieldInit;
     procedure CheckEnd;
@@ -97,10 +96,7 @@ begin
   form1.ClientHeight := maxy * CellSize;
 
   State:=gsNEW;
-
   SetLength(field, maxx, maxy);
-
-  //ShowHidden := False;
   FieldInit;
 end;
 
@@ -165,7 +161,6 @@ begin
     x:= Random(maxx);
     y:= Random(maxy);
     if Field[x,y].State = EmptyCell then begin
-      //if (x=curX) and (y=curY) then continue;
       if (Abs(curX - x) < safeRadius) and (Abs(curY - y) < safeRadius) then continue;
       Field[x,y].State:=BombCell;
       cnt:=cnt + 1;
@@ -198,8 +193,10 @@ begin
     GenerateField(x,y);
     State := gsSTART;
   end;
-  if field[x, y].state = BombCell then
+  if field[x, y].state = BombCell then begin
     GameOver; //game over
+    exit;
+  end;
 
   field[x,y].open := True;
 
@@ -214,7 +211,7 @@ end;
 
 procedure TForm1.OpenNeighbor(x, y: Integer);
 begin
-  writeln('both button');
+
 end;
 
 procedure TForm1.ToggleFlag(x, y: Integer);
@@ -222,9 +219,12 @@ begin
   field[x,y].flag:= not field[x,y].flag;
 end;
 
-procedure TForm1.DrawEmpty(cell: TRect);
+procedure TForm1.DrawEmpty(cell: TRect; boom: Boolean);
 begin
-  PaintBox1.Canvas.Brush.Color:=ColorGray;
+  if boom then
+    PaintBox1.Canvas.Brush.Color:=clRed
+  else
+    PaintBox1.Canvas.Brush.Color:=ColorGray;
   PaintBox1.Canvas.FillRect(cell);
 end;
 
@@ -248,13 +248,13 @@ begin
   PaintBox1.Canvas.TextRect(cell, cell.left, cell.top, IntToStr(num));
 end;
 
-procedure TForm1.DrawMine(cell: TRect);
+procedure TForm1.DrawMine(cell: TRect; boom: Boolean);
 var
   cx, cy, r: Integer;
   i: Integer;
   dx, dy: Double;
 begin
-  DrawEmpty(cell);
+  DrawEmpty(cell, boom);
 
   cx := (cell.Left + cell.Right) div 2;
   cy := (cell.Top + cell.Bottom) div 2;
@@ -354,6 +354,7 @@ begin
   for y:=0 to maxy - 1 do
     for x:= 0 to maxx - 1 do
       field[x, y] := DefaultCell;
+  PaintBox1.Invalidate;
 end;
 
 procedure TForm1.CheckEnd;
@@ -371,6 +372,7 @@ begin
       field[x, y].open := True;
   PaintBox1.Invalidate;
   ShowMessage('Game Over');
+  State := gsNew;
   FieldInit;
 end;
 
