@@ -7,3 +7,4 @@
 !*.lpr
 #!*.lps
 !*.res
+!README.md
