@@ -1,22 +1,79 @@
-object Form1: TForm1
+object frmMain: TfrmMain
   Left = 1920
   Height = 240
   Top = 250
-  Width = 320
+  Width = 178
   Caption = 'MineSweeper'
   ClientHeight = 240
-  ClientWidth = 320
+  ClientWidth = 178
   KeyPreview = True
   Position = poDesktopCenter
   LCLVersion = '4.8.0.0'
   OnCreate = FormCreate
-  object PaintBox1: TPaintBox
+  object pbField: TPaintBox
     Left = 0
-    Height = 240
-    Top = 0
-    Width = 320
+    Height = 190
+    Top = 50
+    Width = 178
     Align = alClient
-    OnMouseDown = PaintBox1MouseDown
-    OnPaint = PaintBox1Paint
+    OnMouseDown = pbFieldMouseDown
+    OnPaint = pbFieldPaint
+  end
+  object pnlTop: TPanel
+    Left = 0
+    Height = 50
+    Top = 0
+    Width = 178
+    Align = alTop
+    BevelOuter = bvNone
+    ClientHeight = 50
+    ClientWidth = 178
+    Color = clSilver
+    ParentBackground = False
+    ParentColor = False
+    TabOrder = 0
+    object lbSmile: TLabel
+      Left = 72
+      Height = 35
+      Top = 0
+      Width = 36
+      Caption = '😐'
+      Font.Height = -29
+      ParentFont = False
+      OnClick = lbSmileClick
+    end
+    object lbMinesLeft: TLabel
+      AnchorSideLeft.Control = pnlTop
+      AnchorSideTop.Control = pnlTop
+      Left = 0
+      Height = 34
+      Top = 0
+      Width = 51
+      AutoSize = False
+      Caption = '000'
+      Color = clRed
+      Font.Color = clRed
+      Font.Height = 30
+      Font.Style = [fsBold]
+      ParentColor = False
+      ParentFont = False
+    end
+    object lbTime: TLabel
+      AnchorSideTop.Control = pnlTop
+      AnchorSideRight.Control = pnlTop
+      AnchorSideRight.Side = asrBottom
+      Left = 127
+      Height = 34
+      Top = 0
+      Width = 51
+      Anchors = [akTop, akRight]
+      Caption = '000'
+      Color = clRed
+      Font.Color = clRed
+      Font.Height = 30
+      Font.Style = [fsBold]
+      ParentColor = False
+      ParentFont = False
+    end
   end
 end

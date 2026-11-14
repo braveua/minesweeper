@@ -5,53 +5,59 @@ unit Main;
 interface
 
 uses
-  Classes, SysUtils, Forms, Controls, Graphics, Dialogs, ExtCtrls;
+  Classes, SysUtils, Forms, Controls, Graphics, ExtCtrls, StdCtrls;
 
 type
   TCell = record
-    state:Integer;
+    value:Integer;
     open:Boolean;
     flag:Boolean;
   end;
-  TGameState=(gsNEW, gsSTART, gsFINISH);
+  TGameState=(gsReady, gsPlaying, gsWon, gsLost);
 
-  { TForm1 }
+  { TfrmMain }
 
-  TForm1 = class(TForm)
-    PaintBox1: TPaintBox;
+  TfrmMain = class(TForm)
+    lbSmile: TLabel;
+    lbMinesLeft: TLabel;
+    lbTime: TLabel;
+    pbField: TPaintBox;
+    pnlTop: TPanel;
     procedure FormCreate(Sender: TObject);
-    procedure PaintBox1MouseDown(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
-    procedure PaintBox1Paint(Sender: TObject);
+    procedure lbSmileClick(Sender: TObject);
+    procedure pbFieldMouseDown(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
+    procedure pbFieldPaint(Sender: TObject);
 
   private
-    field: array of array of TCell;
-    maxx: Integer;
-    maxy: Integer;
+    Field: array of array of TCell;
+    Cols: Integer;
+    Rows: Integer;
     CellSize: Integer;
-    bombmax: Integer;
-    safeRadius: Integer;
+    MineCount: Integer;
+    SafeZoneSize: Integer;
     State: TGameState;
+    FlagCount: Integer;
+    OpenedCount: Integer;
 
     function GetCellRect(x, y:Integer): TRect;
-    procedure GenerateField(curX, curY:Integer);
+    procedure PlaceMines(SafeX, SafeY:Integer);
     procedure OpenCell(x, y: Integer);
-    procedure OpenNeighbor(x, y: Integer);
+    procedure OpenNeighbors(x, y: Integer);
     procedure ToggleFlag(x, y: Integer);
     procedure DrawClosed(cell: TRect);
-    procedure DrawEmpty(cell: TRect; boom: Boolean=False);
-    procedure DrawNum(cell: TRect; num: Integer);
-    procedure DrawMine(cell: TRect; boom: Boolean=False);
+    procedure DrawEmpty(cell: TRect; exploded: Boolean=False);
+    procedure DrawNumber(cell: TRect; num: Integer);
+    procedure DrawMine(cell: TRect; exploded: Boolean=False);
     procedure DrawFlag(cell: TRect);
-    procedure FieldInit;
-    procedure CheckEnd;
-    procedure GameOver;
+    procedure NewGame;
+    procedure EndGame(Won: Boolean);
   public
 
   end;
 
 const
 // Индексы соответствуют цифрам от 1 до 8
-  MINESWEEPER_COLORS: array[1..8] of LongWord = (
+  NumberColors: array[1..8] of TColor = (
     $FF0000, // 1 - Синий (Blue)
     $008000, // 2 - Зелёный (Green)
     $0000FF, // 3 - Красный (Red)
@@ -64,147 +70,157 @@ const
 
   //типы клеток
   EmptyCell = 0;
-  BombCell  = -1;
-  BoomCell  = -2;
+  MineCell  = -1;
+  ExplodedCell  = -2;
   //клетка по-умолчанию
-  DefaultCell: TCell = (state: EmptyCell; open: false; flag: false);
+  DefaultCell: TCell = (value: EmptyCell; open: false; flag: false);
   //цвета
-  ColorGray = $C0C0C0;
-  ColorWhite = $FFFFFF;
-  ColorDark = $808080;
-  //paddirg
-  Padding = 4;
+  CellFaceColor = $C0C0C0;
+  CellLightColor = $FFFFFF;
+  CellShadowColor = $808080;
+  BevelWidth = 4;
+  Smiles: array[TGameState] of String = ('😐', '😐', '😄', '😢');
 
 var
-  Form1: TForm1;
+  frmMain: TfrmMain;
 
 
 implementation
 
 {$R *.lfm}
 
-{ TForm1 }
+{ TfrmMain }
 
-procedure TForm1.FormCreate(Sender: TObject);
+procedure TfrmMain.FormCreate(Sender: TObject);
 begin
-  maxx := 5;
-  maxy := 5;
+  Rows := 5;
+  Cols := 10;
   CellSize := 30;
-  bombmax := 3;
-  safeRadius := 2;
+  MineCount := 5;
+  SafeZoneSize := 2;
 
-  form1.ClientWidth := maxx * CellSize;
-  form1.ClientHeight := maxy * CellSize;
+  ClientWidth := Cols * CellSize;
+  ClientHeight := Rows * CellSize + pnlTop.Height;
+  lbSmile.Left:=(ClientWidth - lbSmile.Width) div 2;
 
-  State:=gsNEW;
-  SetLength(field, maxx, maxy);
-  FieldInit;
+  SetLength(Field, Cols, Rows);
+  NewGame;
 end;
 
-procedure TForm1.PaintBox1MouseDown(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer); // MouseClick
-var
-  xcell, ycell: Integer;
+procedure TfrmMain.lbSmileClick(Sender: TObject);
 begin
-  xcell:=X div CellSize;
-  ycell:=Y div CellSize;
-  if (ssLeft in Shift) and (ssRight in Shift) and (field[xcell, ycell].open) then begin
-    OpenNeighbor(xcell, ycell);
+  NewGame;
+end;
+
+procedure TfrmMain.pbFieldMouseDown(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer); // MouseClick
+var
+  cellx, celly: Integer;
+begin
+  if State in [gsWon, gsLost] then exit;
+  cellx := X div CellSize;
+  celly := Y div CellSize;
+  if (cellx < 0) or (cellx > Cols-1) then exit;
+  if (celly < 0) or (celly > Rows-1) then exit;
+  if (ssLeft in Shift) and (ssRight in Shift) and (Field[cellx, celly].open) then begin
+    OpenNeighbors(cellx, celly);
   end
   else case Button of
-    mbLeft: OpenCell(xcell, ycell);
-    mbRight: ToggleFlag(xcell, ycell);
+    mbLeft: OpenCell(cellx, celly);
+    mbRight: ToggleFlag(cellx, celly);
   end;
 
-  PaintBox1.Invalidate;
+  if MineCount + OpenedCount = Cols*Rows then begin
+    EndGame(True);  //game WIN
+    exit;
+  end;
+  pbField.Invalidate;
 end;
 
-procedure TForm1.PaintBox1Paint(Sender: TObject);        //отрисовка поля
+procedure TfrmMain.pbFieldPaint(Sender: TObject);        //отрисовка поля
 var
   x, y: Integer;
   cell: TRect;
 begin
-  for y:=0 to maxy - 1 do
-    for x := 0 to maxx - 1 do begin
+  for y:=0 to Rows - 1 do
+    for x := 0 to Cols - 1 do begin
       cell:=GetCellRect(x,y);
 
-      if not field[x, y].open then
-        if field[x,y].flag then
+      if not Field[x, y].open then
+        if Field[x,y].flag then
           DrawFlag(cell)
         else
           DrawClosed(cell)
-      else case field[x,y].state of
+      else case Field[x,y].value of
         EmptyCell: DrawEmpty(cell);
-        BombCell: DrawMine(cell);
-        BoomCell: DrawMine(cell, True);
-        1..8: DrawNum(cell, field[x, y].state);
+        MineCell: DrawMine(cell);
+        ExplodedCell: DrawMine(cell, True);
+        1..8: DrawNumber(cell, Field[x, y].value);
         else ;
       end;
   end;
 end;
 
-function TForm1.GetCellRect(x, y: Integer): TRect;  //Rect по XY
+function TfrmMain.GetCellRect(x, y: Integer): TRect;  //Rect по XY
 begin
   result := Rect(x * CellSize, y * CellSize, (x + 1) * CellSize - 1, (y + 1) * CellSize - 1);
 end;
 
-procedure TForm1.GenerateField(curX, curY: Integer);           //генерация поля
+procedure TfrmMain.PlaceMines(SafeX, SafeY: Integer);   //Расстановка мин
 var
   x, y: Integer;
   dx, dy: Integer;
-  cnt, c, r: Integer;
+  placed, nx, ny: Integer;
 begin
-  //
-  //ГЕНЕРАЦИЯ ПОЛЯ!!!!!!!!!!!!!!!!!!
-  //
   Randomize;
-  cnt:=0;
+  placed := 0;
   //Генерируем мины
-  while cnt < bombmax do begin
-    x:= Random(maxx);
-    y:= Random(maxy);
-    if Field[x,y].State = EmptyCell then begin
-      if (Abs(curX - x) < safeRadius) and (Abs(curY - y) < safeRadius) then continue;
-      Field[x,y].State:=BombCell;
-      cnt:=cnt + 1;
+  while placed < MineCount do begin
+    x:= Random(Cols);
+    y:= Random(Rows);
+    if Field[x,y].value = EmptyCell then begin
+      if (Abs(SafeX - x) < SafeZoneSize) and (Abs(SafeY - y) < SafeZoneSize) then continue;
+      Field[x,y].value:=MineCell;
+      Inc(placed);
     end;
   end;
 
-  //Раcчет мин в соседних клетках
-  for x:=0 to maxx - 1 do
-    for y:=0 to maxy - 1 do  begin
-      if field[x, y].state = BombCell then continue;
+  //Расчет мин в соседних клетках
+  for x:=0 to Cols - 1 do
+    for y:=0 to Rows - 1 do  begin
+      if Field[x, y].value = MineCell then continue;
       for dx:=-1 to 1 do
         for dy:=-1 to 1 do begin
-          c:=x+dx;
-          r:=y+dy;
-          if (c < 0) or (c > maxx - 1) then continue;
-          if (r < 0) or (r > maxy - 1) then continue;
-          if field[c,r].state=BombCell then
-            inc(field[x,y].state);
+          nx := x + dx;
+          ny := y + dy;
+          if (nx < 0) or (nx > Cols - 1) then continue;
+          if (ny < 0) or (ny > Rows - 1) then continue;
+          if Field[nx, ny].value=MineCell then
+            inc(Field[x, y].value);
         end;
     end;
 end;
 
-procedure TForm1.OpenCell(x, y: Integer);
+procedure TfrmMain.OpenCell(x, y: Integer);   //открытие ячейки
 var
   dx, dy: integer;
 begin
-  if (x<0) or (x > maxx - 1) or (y<0) or (y > maxy - 1) then exit;
-  if field[x, y].open then exit;
-  if field[x, y].flag then exit;
-  if State = gsNEW then begin
-    GenerateField(x,y);
-    State := gsSTART;
+  if (x<0) or (x > Cols - 1) or (y<0) or (y > Rows - 1) then exit;
+  if Field[x, y].open then exit;
+  if Field[x, y].flag then exit;
+  if State = gsReady then begin
+    PlaceMines(x,y);
+    State := gsPlaying;
   end;
-  if field[x, y].state = BombCell then begin
-    field[x, y].state := BoomCell;
-    GameOver; //game over
+  if Field[x, y].value = MineCell then begin
+    Field[x, y].value := ExplodedCell;
+    EndGame(False); //game over
     exit;
   end;
 
-  field[x,y].open := True;
+  Field[x,y].open := True;
+  Inc(OpenedCount);
 
-  if field[x,y].state = EmptyCell then begin
+  if Field[x,y].value = EmptyCell then begin
     for dx:= x-1 to x+1 do
       for dy:= y-1 to y+1 do begin
         if (x=dx) and (y=dy) then continue;
@@ -213,82 +229,89 @@ begin
   end;
 end;
 
-procedure TForm1.OpenNeighbor(x, y: Integer);
+procedure TfrmMain.OpenNeighbors(x, y: Integer);  //открытие соседних ячеек
 begin
 
 end;
 
-procedure TForm1.ToggleFlag(x, y: Integer); //Установка флажка
+procedure TfrmMain.ToggleFlag(x, y: Integer); //Установка флажка
 begin
-  if not field[x, y].open then
-    field[x,y].flag:= not field[x,y].flag;
+  if not Field[x, y].open then
+    if Field[x,y].flag then begin
+      Field[x,y].flag := False;
+      Dec(FlagCount);
+    end
+    else begin
+      Field[x,y].flag := True;
+      Inc(FlagCount);
+    end;
 end;
 
-procedure TForm1.DrawEmpty(cell: TRect; boom: Boolean);   //пустая ячейка
+procedure TfrmMain.DrawEmpty(cell: TRect; exploded: Boolean);   //пустая ячейка
 begin
-  if boom then
-    PaintBox1.Canvas.Brush.Color:=clRed
+  if exploded then
+    pbField.Canvas.Brush.Color:=clRed
   else
-    PaintBox1.Canvas.Brush.Color:=ColorGray;
-  PaintBox1.Canvas.FillRect(cell);
+    pbField.Canvas.Brush.Color:=CellFaceColor;
+  pbField.Canvas.FillRect(cell);
 end;
 
-procedure TForm1.DrawNum(cell: TRect; num: Integer);      //ячейка с цифрой
+procedure TfrmMain.DrawNumber(cell: TRect; num: Integer);      //ячейка с цифрой
 var
   ts: TTextStyle;
 begin
   DrawEmpty(cell);
 
-  PaintBox1.Canvas.Font.Color:=MINESWEEPER_COLORS[Num];//clRed; //цвет цифры
-  PaintBox1.Canvas.Font.Size:=18;
-  PaintBox1.Canvas.Font.Style:=[fsBold];
+  pbField.Canvas.Font.Color:=NumberColors[Num];//clRed; //цвет цифры
+  pbField.Canvas.Font.Size:=18;
+  pbField.Canvas.Font.Style:=[fsBold];
 
-  ts := PaintBox1.Canvas.TextStyle;
+  ts := pbField.Canvas.TextStyle;
   ts.Alignment    := taCenter;       // По горизонтали: по центру
   ts.Layout       := tlCenter;       // По вертикали: по центру
   ts.SingleLine   := True;           // Обязательно для вертикального выравнивания
   ts.Clipping     := False;          // Выключаем обрезку (на случай, если текст чуть больше box)
 
-  PaintBox1.Canvas.TextStyle := ts;
-  PaintBox1.Canvas.TextRect(cell, cell.left, cell.top, IntToStr(num));
+  pbField.Canvas.TextStyle := ts;
+  pbField.Canvas.TextRect(cell, cell.left, cell.top, IntToStr(num));
 end;
 
-procedure TForm1.DrawMine(cell: TRect; boom: Boolean);   //Мина
+procedure TfrmMain.DrawMine(cell: TRect; exploded: Boolean);   //Мина
 var
   cx, cy, r: Integer;
   i: Integer;
   dx, dy: Double;
 begin
-  DrawEmpty(cell, boom);
+  DrawEmpty(cell, exploded);
 
   cx := (cell.Left + cell.Right) div 2;
   cy := (cell.Top + cell.Bottom) div 2;
   r  := CellSize div 3;
 
   // шипы (8 линий от центра наружу)
-  PaintBox1.Canvas.Pen.Style := psSolid;
-  PaintBox1.Canvas.Pen.Color := clBlack;
-  PaintBox1.Canvas.Pen.Width := 2;
+  pbField.Canvas.Pen.Style := psSolid;
+  pbField.Canvas.Pen.Color := clBlack;
+  pbField.Canvas.Pen.Width := 2;
   for i := 0 to 7 do
   begin
     dx := Cos(i * Pi / 4);
     dy := Sin(i * Pi / 4);
-    PaintBox1.Canvas.MoveTo(cx + Round(r * 0.5 * dx), cy + Round(r * 0.5 * dy));
-    PaintBox1.Canvas.LineTo(cx + Round((r + 4) * dx), cy + Round((r + 4) * dy));
+    pbField.Canvas.MoveTo(cx + Round(r * 0.5 * dx), cy + Round(r * 0.5 * dy));
+    pbField.Canvas.LineTo(cx + Round((r + 4) * dx), cy + Round((r + 4) * dy));
   end;
 
   // корпус мины
-  PaintBox1.Canvas.Pen.Style := psClear;
-  PaintBox1.Canvas.Brush.Color := clBlack;
-  PaintBox1.Canvas.Ellipse(cx - r, cy - r, cx + r, cy + r);
+  pbField.Canvas.Pen.Style := psClear;
+  pbField.Canvas.Brush.Color := clBlack;
+  pbField.Canvas.Ellipse(cx - r, cy - r, cx + r, cy + r);
 
   // блик
-  PaintBox1.Canvas.Brush.Color := clWhite;
-  PaintBox1.Canvas.Ellipse(cx - r div 2 - 1, cy - r div 2 - 1,
+  pbField.Canvas.Brush.Color := clWhite;
+  pbField.Canvas.Ellipse(cx - r div 2 - 1, cy - r div 2 - 1,
                            cx - r div 2 + 3, cy - r div 2 + 3);
 end;
 
-procedure TForm1.DrawFlag(cell: TRect);     //Ячейка с флагом
+procedure TfrmMain.DrawFlag(cell: TRect);     //Ячейка с флагом
 var
   cx: Integer;
   poleX, topY, botY, flagW, flagH: Integer;
@@ -304,30 +327,30 @@ begin
   flagH  := CellSize div 3;
 
   // шест
-  PaintBox1.Canvas.Pen.Style := psSolid;
-  PaintBox1.Canvas.Pen.Color := clBlack;
-  PaintBox1.Canvas.Pen.Width := 2;
-  PaintBox1.Canvas.MoveTo(poleX, topY);
-  PaintBox1.Canvas.LineTo(poleX, botY);
+  pbField.Canvas.Pen.Style := psSolid;
+  pbField.Canvas.Pen.Color := clBlack;
+  pbField.Canvas.Pen.Width := 2;
+  pbField.Canvas.MoveTo(poleX, topY);
+  pbField.Canvas.LineTo(poleX, botY);
 
   // полотнище флага (треугольник)
-  PaintBox1.Canvas.Pen.Style := psClear;
-  PaintBox1.Canvas.Brush.Color := clRed;
-  PaintBox1.Canvas.Polygon([
+  pbField.Canvas.Pen.Style := psClear;
+  pbField.Canvas.Brush.Color := clRed;
+  pbField.Canvas.Polygon([
     Point(poleX, topY),
     Point(poleX + flagW, topY + flagH div 2),
     Point(poleX, topY + flagH)
   ]);
 
   // основание
-  PaintBox1.Canvas.Pen.Style := psSolid;
-  PaintBox1.Canvas.Pen.Color := clBlack;
-  PaintBox1.Canvas.Pen.Width := 2;
-  PaintBox1.Canvas.MoveTo(cx - CellSize div 4, botY);
-  PaintBox1.Canvas.LineTo(cx + CellSize div 4, botY);
+  pbField.Canvas.Pen.Style := psSolid;
+  pbField.Canvas.Pen.Color := clBlack;
+  pbField.Canvas.Pen.Width := 2;
+  pbField.Canvas.MoveTo(cx - CellSize div 4, botY);
+  pbField.Canvas.LineTo(cx + CellSize div 4, botY);
 end;
 
-procedure TForm1.DrawClosed(cell: TRect);   //Закрытая ячейка
+procedure TfrmMain.DrawClosed(cell: TRect);   //Закрытая ячейка
 var
   p1, p2, p3, p4: TPoint;
   p5, p6, p7, p8: TPoint;
@@ -337,48 +360,46 @@ begin
   p2:=Point(p3.x, p1.y);
   p4:=Point(p1.x, p3.y);
 
-  p5:=Point(p1.x + Padding, p1.y + Padding);
-  p6:=Point(p2.x - Padding, p2.y + Padding);
-  p7:=Point(p3.x - Padding, p3.y - Padding);
-  p8:=Point(p4.x + Padding, p4.y - Padding);
+  p5:=Point(p1.x + BevelWidth, p1.y + BevelWidth);
+  p6:=Point(p2.x - BevelWidth, p2.y + BevelWidth);
+  p7:=Point(p3.x - BevelWidth, p3.y - BevelWidth);
+  p8:=Point(p4.x + BevelWidth, p4.y - BevelWidth);
 
-  PaintBox1.Canvas.Pen.Style := psClear; //отключение обводки полигонов
-  PaintBox1.Canvas.Brush.Color:=ColorGray;
-  PaintBox1.Canvas.Fillrect(cell);
-  PaintBox1.Canvas.Brush.Color:=ColorWhite;
-  PaintBox1.Canvas.Polygon([p4, p1, p2, p6, p5, p8]);
-  PaintBox1.Canvas.Brush.Color:=ColorDark;
-  PaintBox1.Canvas.Polygon([p2, p3, p4, p8, p7, p6]);
+  pbField.Canvas.Pen.Style := psClear; //отключение обводки полигонов
+  pbField.Canvas.Brush.Color := CellFaceColor;
+  pbField.Canvas.Fillrect(cell);
+  pbField.Canvas.Brush.Color := CellLightColor;
+  pbField.Canvas.Polygon([p4, p1, p2, p6, p5, p8]);
+  pbField.Canvas.Brush.Color := CellShadowColor;
+  pbField.Canvas.Polygon([p2, p3, p4, p8, p7, p6]);
 
 end;
 
-procedure TForm1.FieldInit;                 //Инициализация поля
+procedure TfrmMain.NewGame;                   //Новая игра /Инициализация поля
 var
   x, y: Integer;
 begin
-  for y:=0 to maxy - 1 do
-    for x:= 0 to maxx - 1 do
-      field[x, y] := DefaultCell;
-  PaintBox1.Invalidate;
+  State :=gsReady;
+  lbSmile.Caption := Smiles[State];
+  FlagCount := 0;
+  OpenedCount := 0;
+  for y:=0 to Rows - 1 do
+    for x:= 0 to Cols - 1 do
+      Field[x, y] := DefaultCell;
+  pbField.Invalidate;
 end;
 
-procedure TForm1.CheckEnd;
-begin
-  //проверка окончания игры
-end;
-
-procedure TForm1.GameOver;                  // Конец игры
+procedure TfrmMain.EndGame(Won: Boolean);
 var
   x, y: Integer;
 begin
-  State := gsFINISH;
-  for x:= 0 to maxx - 1 do
-    for y := 0 to maxy - 1 do
-      field[x, y].open := True;
-  PaintBox1.Invalidate;
-  ShowMessagePos('Game Over', 300, 200);
-  State := gsNew;
-  FieldInit;
+  if Won then State := gsWon
+  else State := gsLost;
+  for x:= 0 to Cols - 1 do
+    for y := 0 to Rows - 1 do
+      Field[x, y].open := True;
+  pbField.Invalidate;
+  lbSmile.Caption := Smiles[State];
 end;
 
 end.
