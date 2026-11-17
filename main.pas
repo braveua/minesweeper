@@ -93,10 +93,10 @@ implementation
 
 procedure TfrmMain.FormCreate(Sender: TObject);
 begin
-  Rows := 5;
-  Cols := 10;
+  Rows := 9;
+  Cols := 9;
   CellSize := 30;
-  MineCount := 5;
+  MineCount := 10;
   SafeZoneSize := 2;
 
   ClientWidth := Cols * CellSize;
@@ -114,19 +114,19 @@ end;
 
 procedure TfrmMain.pbFieldMouseDown(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer); // MouseClick
 var
-  cellx, celly: Integer;
+  cellX, cellY: Integer;
 begin
   if State in [gsWon, gsLost] then exit;
-  cellx := X div CellSize;
-  celly := Y div CellSize;
-  if (cellx < 0) or (cellx > Cols-1) then exit;
-  if (celly < 0) or (celly > Rows-1) then exit;
-  if (ssLeft in Shift) and (ssRight in Shift) and (Field[cellx, celly].open) then begin
-    OpenNeighbors(cellx, celly);
+  cellX := X div CellSize;
+  cellY := Y div CellSize;
+  if (cellX < 0) or (cellX > Cols-1) then exit;
+  if (cellY < 0) or (cellY > Rows-1) then exit;
+  if (ssLeft in Shift) and (Field[cellX, cellY].open) and (Field[cellX, cellY].value >0) then begin
+    OpenNeighbors(cellX, cellY);
   end
   else case Button of
-    mbLeft: OpenCell(cellx, celly);
-    mbRight: ToggleFlag(cellx, celly);
+    mbLeft: OpenCell(cellX, cellY);
+    mbRight: ToggleFlag(cellX, cellY);
   end;
 
   if MineCount + OpenedCount = Cols*Rows then begin
@@ -230,8 +230,24 @@ begin
 end;
 
 procedure TfrmMain.OpenNeighbors(x, y: Integer);  //открытие соседних ячеек
+var
+  nx, ny: Integer;
+  cnt: Integer;
 begin
-
+  cnt := 0;
+  for nx := x - 1 to x + 1 do
+    for ny := y - 1 to y + 1 do begin
+      if (nx = x) and (ny = y) then continue;
+      if (nx < 0) or (ny < 0) or (nx > Cols-1) or (ny > Rows - 1) then continue;
+      if Field[nx, ny].flag then Inc(cnt);
+    end;
+  if cnt = Field[x, y].value then
+    for nx := x - 1 to x + 1 do
+      for ny := y - 1 to y + 1 do begin
+        if (nx = x) and (ny = y) then continue;
+        if (nx < 0) or (ny < 0) or (nx > Cols-1) or (ny > Rows - 1) then continue;
+        if (not Field[nx, ny].flag) and (not Field[nx, ny].open) then OpenCell(nx, ny);
+      end;
 end;
 
 procedure TfrmMain.ToggleFlag(x, y: Integer); //Установка флажка

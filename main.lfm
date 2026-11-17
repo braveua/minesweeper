@@ -26,8 +26,10 @@ object frmMain: TfrmMain
     Width = 178
     Align = alTop
     BevelOuter = bvNone
-    ClientHeight = 50
-    ClientWidth = 178
+    BorderWidth = 5
+    BorderStyle = bsSingle
+    ClientHeight = 48
+    ClientWidth = 176
     Color = clSilver
     ParentBackground = False
     ParentColor = False
@@ -45,9 +47,9 @@ object frmMain: TfrmMain
     object lbMinesLeft: TLabel
       AnchorSideLeft.Control = pnlTop
       AnchorSideTop.Control = pnlTop
-      Left = 0
+      Left = 5
       Height = 34
-      Top = 0
+      Top = 5
       Width = 51
       AutoSize = False
       Caption = '000'
@@ -62,9 +64,9 @@ object frmMain: TfrmMain
       AnchorSideTop.Control = pnlTop
       AnchorSideRight.Control = pnlTop
       AnchorSideRight.Side = asrBottom
-      Left = 127
+      Left = 120
       Height = 34
-      Top = 0
+      Top = 5
       Width = 51
       Anchors = [akTop, akRight]
       Caption = '000'
