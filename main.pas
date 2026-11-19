@@ -34,6 +34,7 @@ type
     Rows: Integer;
     CellSize: Integer;
     MineCount: Integer;
+    MineRest: Integer;
     SafeZoneSize: Integer;
     State: TGameState;
     FlagCount: Integer;
@@ -51,6 +52,7 @@ type
     procedure DrawFlag(cell: TRect);
     procedure NewGame;
     procedure EndGame(Won: Boolean);
+    procedure ShowRest;
   public
 
   end;
@@ -256,11 +258,14 @@ begin
     if Field[x,y].flag then begin
       Field[x,y].flag := False;
       Dec(FlagCount);
+      Inc(MineRest);
     end
     else begin
       Field[x,y].flag := True;
       Inc(FlagCount);
+      Dec(MineRest);
     end;
+    ShowRest;
 end;
 
 procedure TfrmMain.DrawEmpty(cell: TRect; exploded: Boolean);   //пустая ячейка
@@ -399,6 +404,8 @@ begin
   lbSmile.Caption := Smiles[State];
   FlagCount := 0;
   OpenedCount := 0;
+  MineRest := MineCount;
+  ShowRest;
   for y:=0 to Rows - 1 do
     for x:= 0 to Cols - 1 do
       Field[x, y] := DefaultCell;
@@ -416,6 +423,15 @@ begin
       Field[x, y].open := True;
   pbField.Invalidate;
   lbSmile.Caption := Smiles[State];
+end;
+
+procedure TfrmMain.ShowRest;
+var
+  s: String;
+begin
+  s := IntToStr(MineRest);
+  s := Copy('000', 0, 3-length(s))+s;
+  lbMinesLeft.Caption:=s;
 end;
 
 end.

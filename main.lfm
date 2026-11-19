@@ -8,7 +8,7 @@ object frmMain: TfrmMain
   ClientWidth = 178
   KeyPreview = True
   Position = poDesktopCenter
-  LCLVersion = '4.8.0.0'
+  LCLVersion = '5.0.1.0'
   OnCreate = FormCreate
   object pbField: TPaintBox
     Left = 0
@@ -28,8 +28,8 @@ object frmMain: TfrmMain
     BevelOuter = bvNone
     BorderWidth = 5
     BorderStyle = bsSingle
-    ClientHeight = 48
-    ClientWidth = 176
+    ClientHeight = 50
+    ClientWidth = 178
     Color = clSilver
     ParentBackground = False
     ParentColor = False
@@ -64,7 +64,7 @@ object frmMain: TfrmMain
       AnchorSideTop.Control = pnlTop
       AnchorSideRight.Control = pnlTop
       AnchorSideRight.Side = asrBottom
-      Left = 120
+      Left = 122
       Height = 34
       Top = 5
       Width = 51
