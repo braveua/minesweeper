@@ -18,15 +18,17 @@ type
   { TfrmMain }
 
   TfrmMain = class(TForm)
+    imgDigits: TImage;
     lbSmile: TLabel;
-    lbMinesLeft: TLabel;
     lbTime: TLabel;
+    pbRest: TPaintBox;
     pbField: TPaintBox;
     pnlTop: TPanel;
     procedure FormCreate(Sender: TObject);
     procedure lbSmileClick(Sender: TObject);
     procedure pbFieldMouseDown(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
     procedure pbFieldPaint(Sender: TObject);
+    procedure pbRestPaint(Sender: TObject);
 
   private
     Field: array of array of TCell;
@@ -52,7 +54,6 @@ type
     procedure DrawFlag(cell: TRect);
     procedure NewGame;
     procedure EndGame(Won: Boolean);
-    procedure ShowRest;
   public
 
   end;
@@ -160,6 +161,30 @@ begin
         else ;
       end;
   end;
+  pbRest.Invalidate;
+end;
+
+procedure TfrmMain.pbRestPaint(Sender: TObject);
+var
+  toRect, fromRect: TRect;
+  s: string
+  posx: Integer = 1;
+  w: Integer = 14;
+  h: Integer = 24;
+  idx: Integer;
+  i: Integer;
+begin
+  s := IntToStr(MineRest);
+  while length(s) <3 do s:='0' + s;
+  for i:=0 to 2 do begin
+    posx:=i;
+    idx := Pos(s[i+1], '1234567890- ') - 1;
+
+    toRect := Rect(posx*w, 0, posx*w+w, h);   // Куда рисуем (на PaintBox)
+    fromRect := Rect(idx*w, 0, idx*w+w, h); // Откуда берем (из картинки)
+
+    pbRest.Canvas.CopyRect(toRect, imgDigits.Picture.Bitmap.Canvas, fromRect);
+  end;
 end;
 
 function TfrmMain.GetCellRect(x, y: Integer): TRect;  //Rect по XY
@@ -265,7 +290,6 @@ begin
       Inc(FlagCount);
       Dec(MineRest);
     end;
-    ShowRest;
 end;
 
 procedure TfrmMain.DrawEmpty(cell: TRect; exploded: Boolean);   //пустая ячейка
@@ -405,7 +429,6 @@ begin
   FlagCount := 0;
   OpenedCount := 0;
   MineRest := MineCount;
-  ShowRest;
   for y:=0 to Rows - 1 do
     for x:= 0 to Cols - 1 do
       Field[x, y] := DefaultCell;
@@ -416,22 +439,16 @@ procedure TfrmMain.EndGame(Won: Boolean);
 var
   x, y: Integer;
 begin
-  if Won then State := gsWon
+  if Won then begin
+    State := gsWon;
+    MineRest := 0;
+  end
   else State := gsLost;
   for x:= 0 to Cols - 1 do
     for y := 0 to Rows - 1 do
       Field[x, y].open := True;
   pbField.Invalidate;
   lbSmile.Caption := Smiles[State];
-end;
-
-procedure TfrmMain.ShowRest;
-var
-  s: String;
-begin
-  s := IntToStr(MineRest);
-  s := Copy('000', 0, 3-length(s))+s;
-  lbMinesLeft.Caption:=s;
 end;
 
 end.

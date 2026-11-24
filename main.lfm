@@ -8,7 +8,7 @@ object frmMain: TfrmMain
   ClientWidth = 178
   KeyPreview = True
   Position = poDesktopCenter
-  LCLVersion = '5.0.1.0'
+  LCLVersion = '4.8.0.0'
   OnCreate = FormCreate
   object pbField: TPaintBox
     Left = 0
@@ -28,8 +28,8 @@ object frmMain: TfrmMain
     BevelOuter = bvNone
     BorderWidth = 5
     BorderStyle = bsSingle
-    ClientHeight = 50
-    ClientWidth = 178
+    ClientHeight = 48
+    ClientWidth = 176
     Color = clSilver
     ParentBackground = False
     ParentColor = False
@@ -37,34 +37,18 @@ object frmMain: TfrmMain
     object lbSmile: TLabel
       Left = 72
       Height = 35
-      Top = 0
+      Top = 8
       Width = 36
       Caption = '😐'
       Font.Height = -29
       ParentFont = False
       OnClick = lbSmileClick
     end
-    object lbMinesLeft: TLabel
-      AnchorSideLeft.Control = pnlTop
-      AnchorSideTop.Control = pnlTop
-      Left = 5
-      Height = 34
-      Top = 5
-      Width = 51
-      AutoSize = False
-      Caption = '000'
-      Color = clRed
-      Font.Color = clRed
-      Font.Height = 30
-      Font.Style = [fsBold]
-      ParentColor = False
-      ParentFont = False
-    end
     object lbTime: TLabel
       AnchorSideTop.Control = pnlTop
       AnchorSideRight.Control = pnlTop
       AnchorSideRight.Side = asrBottom
-      Left = 122
+      Left = 120
       Height = 34
       Top = 5
       Width = 51
@@ -77,5 +61,42 @@ object frmMain: TfrmMain
       ParentColor = False
       ParentFont = False
     end
+    object pbRest: TPaintBox
+      Left = 8
+      Height = 24
+      Top = 11
+      Width = 42
+      OnPaint = pbRestPaint
+    end
+  end
+  object imgDigits: TImage
+    Left = 8
+    Height = 23
+    Top = 64
+    Width = 167
+    AutoSize = True
+    Picture.Data = {
+      1754506F727461626C654E6574776F726B477261706869634B02000089504E47
+      0D0A1A0A0000000D49484452000000A7000000170802000000E1BEC8CE000002
+      1249444154789CED9A018E83300C041DD48FF1B3FD3977BA0A04C476367100B5
+      170B455534783731548DD549B898E779905F434EDB2718E32916FB6A269F55FF
+      1452E85D2A92D37E36BFE428FF3B93448FD44A2EB4FAE2E64413891A9F0F9258
+      4768BB844A7292E314EC4DDF8054B258458A517831483527B2A79E2451E9F329
+      12768DA0ADC82727D19E05AC8644D3C69FADFD152165A705577D234F39A1559D
+      241B7C3E42C2A811EC1539E44BEC5D1357BB17190F045CE1469F9180E113F48A
+      E0BCEB6DDA11321E1855AF24C7BB3EDEF556ED08190F8CAA57925ED513A11127
+      AD799E44C0156EF419217151D5451B9376A7DA52682665FDD51A2191AD9324F9
+      B577F16915182575D8FB097A4538555D76CF028ECF453A66F48F1F0D64EA44A2
+      89C43AA2B4F674CD8AA4C7CEE3483A39DF635D6F6E91FE3DAF2BC8A553CFAB39
+      27EF935447CDCE0B59751C6F104D78339AB40B99360C52ED3AF5251D9F6A4E89
+      AD3DE89351777242DB7931C6F707EFD79CF395229A27B833FCBD71D29AFFBE9C
+      A0777E3FFF72383E406B33F7C6493EF0E139D154F5BAF3BAD09E30AA2E3D03E3
+      5DEF1818EF7A474F1855979E814BABBE1FFDE347DE2880A6516C53F0EA7C4ECB
+      6744BD21E70D3EE156DD220BFFAA4886C5532C86B675F8918C64D4F99CE21EE7
+      DAD46B73DEE613DACEFB645D6F2E49458788EFE291EA7CCE74817A55CE9B7DA2
+      927CE5B468B9F646C9E0C9FFAC7E85CF22F9036DAD9D80FD6E525C0000000049
+      454E44AE426082
+    }
+    Visible = False
   end
 end
