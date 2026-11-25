@@ -20,15 +20,18 @@ type
   TfrmMain = class(TForm)
     imgDigits: TImage;
     lbSmile: TLabel;
-    lbTime: TLabel;
     pbRest: TPaintBox;
     pbField: TPaintBox;
+    pbTimer: TPaintBox;
     pnlTop: TPanel;
+    Timer1: TTimer;
     procedure FormCreate(Sender: TObject);
     procedure lbSmileClick(Sender: TObject);
     procedure pbFieldMouseDown(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
     procedure pbFieldPaint(Sender: TObject);
     procedure pbRestPaint(Sender: TObject);
+    procedure pbTimerPaint(Sender: TObject);
+    procedure Timer1Timer(Sender: TObject);
 
   private
     Field: array of array of TCell;
@@ -37,6 +40,7 @@ type
     CellSize: Integer;
     MineCount: Integer;
     MineRest: Integer;
+    Timer: Integer;
     SafeZoneSize: Integer;
     State: TGameState;
     FlagCount: Integer;
@@ -167,7 +171,7 @@ end;
 procedure TfrmMain.pbRestPaint(Sender: TObject);
 var
   toRect, fromRect: TRect;
-  s: string
+  s: string;
   posx: Integer = 1;
   w: Integer = 14;
   h: Integer = 24;
@@ -185,6 +189,36 @@ begin
 
     pbRest.Canvas.CopyRect(toRect, imgDigits.Picture.Bitmap.Canvas, fromRect);
   end;
+end;
+
+procedure TfrmMain.pbTimerPaint(Sender: TObject);
+var
+  toRect, fromRect: TRect;
+  s: string;
+  posx: Integer = 1;
+  w: Integer = 14;
+  h: Integer = 24;
+  idx: Integer;
+  i: Integer;
+begin
+  s := IntToStr(timer);
+  while length(s) <3 do s:='0' + s;
+  for i:=0 to 2 do begin
+    posx:=i;
+    idx := Pos(s[i+1], '1234567890- ') - 1;
+
+    toRect := Rect(posx*w, 0, posx*w+w, h);   // Куда рисуем (на PaintBox)
+    fromRect := Rect(idx*w, 0, idx*w+w, h); // Откуда берем (из картинки)
+
+    pbTimer.Canvas.CopyRect(toRect, imgDigits.Picture.Bitmap.Canvas, fromRect);
+  end;
+end;
+
+procedure TfrmMain.Timer1Timer(Sender: TObject);
+begin
+  if State in [gsLost, gsWon] then exit;
+  Inc(timer);
+  pbTimer.Invalidate;
 end;
 
 function TfrmMain.GetCellRect(x, y: Integer): TRect;  //Rect по XY
@@ -424,11 +458,14 @@ procedure TfrmMain.NewGame;                   //Новая игра /Иници�
 var
   x, y: Integer;
 begin
-  State :=gsReady;
+  State := gsReady;
   lbSmile.Caption := Smiles[State];
   FlagCount := 0;
   OpenedCount := 0;
   MineRest := MineCount;
+  timer := 0;
+  pbTimer.Invalidate;
+  pbRest.Invalidate;
   for y:=0 to Rows - 1 do
     for x:= 0 to Cols - 1 do
       Field[x, y] := DefaultCell;

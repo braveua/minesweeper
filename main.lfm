@@ -8,7 +8,7 @@ object frmMain: TfrmMain
   ClientWidth = 178
   KeyPreview = True
   Position = poDesktopCenter
-  LCLVersion = '4.8.0.0'
+  LCLVersion = '5.0.1.0'
   OnCreate = FormCreate
   object pbField: TPaintBox
     Left = 0
@@ -28,8 +28,8 @@ object frmMain: TfrmMain
     BevelOuter = bvNone
     BorderWidth = 5
     BorderStyle = bsSingle
-    ClientHeight = 48
-    ClientWidth = 176
+    ClientHeight = 50
+    ClientWidth = 178
     Color = clSilver
     ParentBackground = False
     ParentColor = False
@@ -44,29 +44,20 @@ object frmMain: TfrmMain
       ParentFont = False
       OnClick = lbSmileClick
     end
-    object lbTime: TLabel
-      AnchorSideTop.Control = pnlTop
-      AnchorSideRight.Control = pnlTop
-      AnchorSideRight.Side = asrBottom
-      Left = 120
-      Height = 34
-      Top = 5
-      Width = 51
-      Anchors = [akTop, akRight]
-      Caption = '000'
-      Color = clRed
-      Font.Color = clRed
-      Font.Height = 30
-      Font.Style = [fsBold]
-      ParentColor = False
-      ParentFont = False
-    end
     object pbRest: TPaintBox
-      Left = 8
+      Left = 9
       Height = 24
-      Top = 11
+      Top = 12
       Width = 42
       OnPaint = pbRestPaint
+    end
+    object pbTimer: TPaintBox
+      Left = 128
+      Height = 24
+      Top = 12
+      Width = 42
+      Anchors = [akTop]
+      OnPaint = pbTimerPaint
     end
   end
   object imgDigits: TImage
@@ -98,5 +89,10 @@ object frmMain: TfrmMain
       454E44AE426082
     }
     Visible = False
+  end
+  object Timer1: TTimer
+    OnTimer = Timer1Timer
+    Left = 136
+    Top = 184
   end
 end
