@@ -41,9 +41,7 @@ type
     MineCount: Integer;
     MineRest: Integer;
     Timer: Integer;
-    SafeZoneSize: Integer;
     State: TGameState;
-    FlagCount: Integer;
     OpenedCount: Integer;
 
     function GetCellRect(x, y:Integer): TRect;
@@ -56,6 +54,7 @@ type
     procedure DrawNumber(cell: TRect; num: Integer);
     procedure DrawMine(cell: TRect; exploded: Boolean=False);
     procedure DrawFlag(cell: TRect);
+    procedure DrawWrongFlag(cell: TRect);
     procedure NewGame;
     procedure EndGame(Won: Boolean);
   public
@@ -74,11 +73,13 @@ const
     $000000, // 7 - Чёрный (Black)
     $808080  // 8 - Серый (Gray)
   );
+  FirstClickRadius = 1;
 
   //типы клеток
   EmptyCell = 0;
   MineCell  = -1;
   ExplodedCell  = -2;
+  WrongFlagCell = -3;
   //клетка по-умолчанию
   DefaultCell: TCell = (value: EmptyCell; open: false; flag: false);
   //цвета
@@ -93,24 +94,31 @@ var
 
 
 implementation
-
+  uses
+    Math;
 {$R *.lfm}
+
+function FormatCounter(Value: Integer): string; forward;
 
 { TfrmMain }
 
 procedure TfrmMain.FormCreate(Sender: TObject);
 begin
+  Randomize;
   Rows := 9;
   Cols := 9;
   CellSize := 30;
   MineCount := 10;
-  SafeZoneSize := 2;
 
   ClientWidth := Cols * CellSize;
   ClientHeight := Rows * CellSize + pnlTop.Height;
   lbSmile.Left:=(ClientWidth - lbSmile.Width) div 2;
 
   SetLength(Field, Cols, Rows);
+  // FormCreate: проверка конфигурации, до начала игры
+  if MineCount > Cols * Rows - Sqr(2 * FirstClickRadius + 1) then
+    raise Exception.CreateFmt('Некорректный уровень: %d мин на поле %dx%d',
+      [MineCount, Cols, Rows]);
   NewGame;
 end;
 
@@ -136,9 +144,9 @@ begin
     mbRight: ToggleFlag(cellX, cellY);
   end;
 
-  if MineCount + OpenedCount = Cols*Rows then begin
+  if (State = gsPlaying) and (MineCount + OpenedCount = Cols*Rows) then begin
     EndGame(True);  //game WIN
-    exit;
+    Exit;
   end;
   pbField.Invalidate;
 end;
@@ -148,6 +156,9 @@ var
   x, y: Integer;
   cell: TRect;
 begin
+  pbField.Canvas.Brush.Style := bsSolid;
+  pbField.Canvas.Brush.Color := CellFaceColor;
+  pbField.Canvas.FillRect(pbField.ClientRect);
   for y:=0 to Rows - 1 do
     for x := 0 to Cols - 1 do begin
       cell:=GetCellRect(x,y);
@@ -160,6 +171,7 @@ begin
       else case Field[x,y].value of
         EmptyCell: DrawEmpty(cell);
         MineCell: DrawMine(cell);
+        WrongFlagCell: DrawWrongFlag(cell);
         ExplodedCell: DrawMine(cell, True);
         1..8: DrawNumber(cell, Field[x, y].value);
         else ;
@@ -172,19 +184,17 @@ procedure TfrmMain.pbRestPaint(Sender: TObject);
 var
   toRect, fromRect: TRect;
   s: string;
-  posx: Integer = 1;
   w: Integer = 14;
-  h: Integer = 24;
+  h: Integer = 23;
   idx: Integer;
   i: Integer;
 begin
-  s := IntToStr(MineRest);
-  while length(s) <3 do s:='0' + s;
+  s:=FormatCounter(MineRest);
   for i:=0 to 2 do begin
-    posx:=i;
     idx := Pos(s[i+1], '1234567890- ') - 1;
+    if idx < 0 then idx := 11;
 
-    toRect := Rect(posx*w, 0, posx*w+w, h);   // Куда рисуем (на PaintBox)
+    toRect := Rect(i*w, 0, i*w+w, h);   // Куда рисуем (на PaintBox)
     fromRect := Rect(idx*w, 0, idx*w+w, h); // Откуда берем (из картинки)
 
     pbRest.Canvas.CopyRect(toRect, imgDigits.Picture.Bitmap.Canvas, fromRect);
@@ -195,19 +205,17 @@ procedure TfrmMain.pbTimerPaint(Sender: TObject);
 var
   toRect, fromRect: TRect;
   s: string;
-  posx: Integer = 1;
   w: Integer = 14;
-  h: Integer = 24;
+  h: Integer = 23;
   idx: Integer;
   i: Integer;
 begin
-  s := IntToStr(timer);
-  while length(s) <3 do s:='0' + s;
+  s := FormatCounter(timer);
   for i:=0 to 2 do begin
-    posx:=i;
     idx := Pos(s[i+1], '1234567890- ') - 1;
+    if idx < 0 then idx := 11;
 
-    toRect := Rect(posx*w, 0, posx*w+w, h);   // Куда рисуем (на PaintBox)
+    toRect := Rect(i*w, 0, i*w+w, h);   // Куда рисуем (на PaintBox)
     fromRect := Rect(idx*w, 0, idx*w+w, h); // Откуда берем (из картинки)
 
     pbTimer.Canvas.CopyRect(toRect, imgDigits.Picture.Bitmap.Canvas, fromRect);
@@ -216,14 +224,14 @@ end;
 
 procedure TfrmMain.Timer1Timer(Sender: TObject);
 begin
-  if State in [gsLost, gsWon] then exit;
+  if State in [gsLost, gsWon, gsReady] then exit;
   Inc(timer);
   pbTimer.Invalidate;
 end;
 
 function TfrmMain.GetCellRect(x, y: Integer): TRect;  //Rect по XY
 begin
-  result := Rect(x * CellSize, y * CellSize, (x + 1) * CellSize - 1, (y + 1) * CellSize - 1);
+  Result := Rect(x * CellSize, y * CellSize, (x + 1) * CellSize, (y + 1) * CellSize);
 end;
 
 procedure TfrmMain.PlaceMines(SafeX, SafeY: Integer);   //Расстановка мин
@@ -232,14 +240,13 @@ var
   dx, dy: Integer;
   placed, nx, ny: Integer;
 begin
-  Randomize;
   placed := 0;
   //Генерируем мины
   while placed < MineCount do begin
     x:= Random(Cols);
     y:= Random(Rows);
     if Field[x,y].value = EmptyCell then begin
-      if (Abs(SafeX - x) < SafeZoneSize) and (Abs(SafeY - y) < SafeZoneSize) then continue;
+      if (Abs(SafeX - x) <= FirstClickRadius) and (Abs(SafeY - y) <= FirstClickRadius) then continue;
       Field[x,y].value:=MineCell;
       Inc(placed);
     end;
@@ -265,6 +272,7 @@ procedure TfrmMain.OpenCell(x, y: Integer);   //открытие ячейки
 var
   dx, dy: integer;
 begin
+  if State in [gsWon, gsLost] then Exit;
   if (x<0) or (x > Cols - 1) or (y<0) or (y > Rows - 1) then exit;
   if Field[x, y].open then exit;
   if Field[x, y].flag then exit;
@@ -308,6 +316,7 @@ begin
         if (nx = x) and (ny = y) then continue;
         if (nx < 0) or (ny < 0) or (nx > Cols-1) or (ny > Rows - 1) then continue;
         if (not Field[nx, ny].flag) and (not Field[nx, ny].open) then OpenCell(nx, ny);
+        if State <> gsPlaying then Exit;
       end;
 end;
 
@@ -316,12 +325,10 @@ begin
   if not Field[x, y].open then
     if Field[x,y].flag then begin
       Field[x,y].flag := False;
-      Dec(FlagCount);
       Inc(MineRest);
     end
     else begin
       Field[x,y].flag := True;
-      Inc(FlagCount);
       Dec(MineRest);
     end;
 end;
@@ -333,6 +340,18 @@ begin
   else
     pbField.Canvas.Brush.Color:=CellFaceColor;
   pbField.Canvas.FillRect(cell);
+
+  if not exploded then
+  begin
+    pbField.Canvas.Pen.Style := psSolid;
+    pbField.Canvas.Pen.Width := 1;
+    pbField.Canvas.Pen.Color := CellShadowColor;
+
+    pbField.Canvas.MoveTo(cell.Left, cell.Bottom - 1);
+    pbField.Canvas.LineTo(cell.Right - 1, cell.Bottom - 1);
+    pbField.Canvas.MoveTo(cell.Right - 1, cell.Top);
+    pbField.Canvas.LineTo(cell.Right - 1, cell.Bottom - 1);
+  end;
 end;
 
 procedure TfrmMain.DrawNumber(cell: TRect; num: Integer);      //ячейка с цифрой
@@ -341,7 +360,7 @@ var
 begin
   DrawEmpty(cell);
 
-  pbField.Canvas.Font.Color:=NumberColors[Num];//clRed; //цвет цифры
+  pbField.Canvas.Font.Color:=NumberColors[Num];//цвет цифры
   pbField.Canvas.Font.Size:=18;
   pbField.Canvas.Font.Style:=[fsBold];
 
@@ -395,8 +414,7 @@ var
   cx: Integer;
   poleX, topY, botY, flagW, flagH: Integer;
 begin
-  DrawEmpty(cell);
-
+  DrawClosed(cell);
   cx := (cell.Left + cell.Right) div 2;
 
   poleX  := cx;
@@ -429,20 +447,32 @@ begin
   pbField.Canvas.LineTo(cx + CellSize div 4, botY);
 end;
 
+procedure TfrmMain.DrawWrongFlag(cell: TRect);
+begin
+  DrawMine(cell);
+  pbField.Canvas.Pen.Style := psSolid;
+  pbField.Canvas.Pen.Color := clRed;
+  pbField.Canvas.Pen.Width := 2;
+  pbField.Canvas.MoveTo(cell.Left + 6, cell.Top + 6);
+  pbField.Canvas.LineTo(cell.Right - 7, cell.Bottom - 7);
+  pbField.Canvas.MoveTo(cell.Right - 7, cell.Top + 6);
+  pbField.Canvas.LineTo(cell.Left + 6, cell.Bottom - 7);
+end;
+
 procedure TfrmMain.DrawClosed(cell: TRect);   //Закрытая ячейка
 var
   p1, p2, p3, p4: TPoint;
   p5, p6, p7, p8: TPoint;
 begin
   p1:=cell.TopLeft;
-  p3:=cell.BottomRight;
-  p2:=Point(p3.x, p1.y);
-  p4:=Point(p1.x, p3.y);
+  p3 := Point(cell.Right - 1, cell.Bottom - 1);
+  p2 := Point(p3.x, p1.y);
+  p4 := Point(p1.x, p3.y);
 
-  p5:=Point(p1.x + BevelWidth, p1.y + BevelWidth);
-  p6:=Point(p2.x - BevelWidth, p2.y + BevelWidth);
-  p7:=Point(p3.x - BevelWidth, p3.y - BevelWidth);
-  p8:=Point(p4.x + BevelWidth, p4.y - BevelWidth);
+  p5 := Point(p1.x + BevelWidth, p1.y + BevelWidth);
+  p6 := Point(p2.x - BevelWidth, p2.y + BevelWidth);
+  p7 := Point(p3.x - BevelWidth, p3.y - BevelWidth);
+  p8 := Point(p4.x + BevelWidth, p4.y - BevelWidth);
 
   pbField.Canvas.Pen.Style := psClear; //отключение обводки полигонов
   pbField.Canvas.Brush.Color := CellFaceColor;
@@ -460,7 +490,6 @@ var
 begin
   State := gsReady;
   lbSmile.Caption := Smiles[State];
-  FlagCount := 0;
   OpenedCount := 0;
   MineRest := MineCount;
   timer := 0;
@@ -479,13 +508,47 @@ begin
   if Won then begin
     State := gsWon;
     MineRest := 0;
+    for x := 0 to Cols - 1 do
+      for y := 0 to Rows - 1 do
+        if Field[x, y].value = MineCell then
+        begin
+          Field[x, y].flag := True;    // авто-флаги на все мины
+          Field[x, y].open := False;
+        end;
   end
-  else State := gsLost;
-  for x:= 0 to Cols - 1 do
-    for y := 0 to Rows - 1 do
-      Field[x, y].open := True;
+  else begin
+    State := gsLost;
+    for x:= 0 to Cols - 1 do
+      for y := 0 to Rows - 1 do
+        begin
+          if Field[x, y].flag then
+          begin
+            if Field[x, y].value = MineCell then
+              Field[x, y].open := False              // верный флаг — остаётся флагом
+            else
+            begin
+              Field[x, y].value := WrongFlagCell;    // неверный — мина с крестом
+              Field[x, y].flag := False;
+              Field[x, y].open := True;
+            end;
+          end
+          else
+            Field[x, y].open := True;
+        end;
+  end;
   pbField.Invalidate;
   lbSmile.Caption := Smiles[State];
+end;
+
+function FormatCounter(Value: Integer): string;
+var
+  n: Integer;
+begin
+  n := EnsureRange(Value, -99, 999);          // Math
+  Result := IntToStr(Abs(n));
+  while Length(Result) < 3 - Ord(n < 0) do
+    Result := '0' + Result;
+  if n < 0 then Result := '-' + Result;
 end;
 
 end.
