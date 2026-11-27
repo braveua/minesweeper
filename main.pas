@@ -49,6 +49,7 @@ type
     procedure OpenCell(x, y: Integer);
     procedure OpenNeighbors(x, y: Integer);
     procedure ToggleFlag(x, y: Integer);
+    procedure DrawDigits(ACanvas: TCanvas; Value: Integer);
     procedure DrawClosed(cell: TRect);
     procedure DrawEmpty(cell: TRect; exploded: Boolean=False);
     procedure DrawNumber(cell: TRect; num: Integer);
@@ -74,6 +75,8 @@ const
     $808080  // 8 - Серый (Gray)
   );
   FirstClickRadius = 1;
+  DigitWidth  = 14;
+  DigitHeight = 23;
 
   //типы клеток
   EmptyCell = 0;
@@ -177,49 +180,35 @@ begin
         else ;
       end;
   end;
-  pbRest.Invalidate;
+end;
+
+procedure TfrmMain.DrawDigits(ACanvas: TCanvas; Value: Integer);
+var
+  s: string;
+  i, idx: Integer;
+  toRect, fromRect: TRect;
+begin
+  s := FormatCounter(Value);
+  for i := 0 to 2 do
+  begin
+    idx := Pos(s[i + 1], '1234567890- ') - 1;
+    if idx < 0 then idx := 11;
+
+    toRect   := Rect(i * DigitWidth, 0, (i + 1) * DigitWidth, DigitHeight);
+    fromRect := Rect(idx * DigitWidth, 0, (idx + 1) * DigitWidth, DigitHeight);
+
+    ACanvas.CopyRect(toRect, imgDigits.Picture.Bitmap.Canvas, fromRect);
+  end;
 end;
 
 procedure TfrmMain.pbRestPaint(Sender: TObject);
-var
-  toRect, fromRect: TRect;
-  s: string;
-  w: Integer = 14;
-  h: Integer = 23;
-  idx: Integer;
-  i: Integer;
 begin
-  s:=FormatCounter(MineRest);
-  for i:=0 to 2 do begin
-    idx := Pos(s[i+1], '1234567890- ') - 1;
-    if idx < 0 then idx := 11;
-
-    toRect := Rect(i*w, 0, i*w+w, h);   // Куда рисуем (на PaintBox)
-    fromRect := Rect(idx*w, 0, idx*w+w, h); // Откуда берем (из картинки)
-
-    pbRest.Canvas.CopyRect(toRect, imgDigits.Picture.Bitmap.Canvas, fromRect);
-  end;
+  DrawDigits(pbRest.Canvas, MineRest);
 end;
 
 procedure TfrmMain.pbTimerPaint(Sender: TObject);
-var
-  toRect, fromRect: TRect;
-  s: string;
-  w: Integer = 14;
-  h: Integer = 23;
-  idx: Integer;
-  i: Integer;
 begin
-  s := FormatCounter(timer);
-  for i:=0 to 2 do begin
-    idx := Pos(s[i+1], '1234567890- ') - 1;
-    if idx < 0 then idx := 11;
-
-    toRect := Rect(i*w, 0, i*w+w, h);   // Куда рисуем (на PaintBox)
-    fromRect := Rect(idx*w, 0, idx*w+w, h); // Откуда берем (из картинки)
-
-    pbTimer.Canvas.CopyRect(toRect, imgDigits.Picture.Bitmap.Canvas, fromRect);
-  end;
+  DrawDigits(pbTimer.Canvas, timer);
 end;
 
 procedure TfrmMain.Timer1Timer(Sender: TObject);
@@ -331,6 +320,7 @@ begin
       Field[x,y].flag := True;
       Dec(MineRest);
     end;
+    pbRest.Invalidate;
 end;
 
 procedure TfrmMain.DrawEmpty(cell: TRect; exploded: Boolean);   //пустая ячейка
@@ -537,6 +527,7 @@ begin
         end;
   end;
   pbField.Invalidate;
+  pbRest.Invalidate;
   lbSmile.Caption := Smiles[State];
 end;
 
