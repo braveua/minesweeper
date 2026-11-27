@@ -311,16 +311,18 @@ end;
 
 procedure TfrmMain.ToggleFlag(x, y: Integer); //Установка флажка
 begin
-  if not Field[x, y].open then
-    if Field[x,y].flag then begin
-      Field[x,y].flag := False;
-      Inc(MineRest);
-    end
-    else begin
-      Field[x,y].flag := True;
-      Dec(MineRest);
-    end;
-    pbRest.Invalidate;
+  if Field[x, y].open then Exit;
+  if Field[x, y].flag then
+  begin
+    Field[x, y].flag := False;
+    Inc(MineRest);
+  end
+  else
+  begin
+    Field[x, y].flag := True;
+    Dec(MineRest);
+  end;
+  pbRest.Invalidate;
 end;
 
 procedure TfrmMain.DrawEmpty(cell: TRect; exploded: Boolean);   //пустая ячейка
